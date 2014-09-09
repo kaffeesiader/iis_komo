@@ -68,67 +68,27 @@ void runTest(iis_komo::KomoInterface &ki) {
 
     ROS_INFO("Planning for first target...");
 
-    vector<double> init;
-    for (int i = 0; i < 7; ++i) {
-        init.push_back(0.0);
-    }
+    vector<double> jnt_state;
+    getState(jnt_state);
 
     arr traj;
-    if(ki.plan(init, 0.3, 0.3, 0.5, 1.5, 0.0, 0.0, traj)) {
+    if(ki.plan(jnt_state, 0.3, 0.3, 0.5, -1.5, 0.0, -1.0, traj)) {
         ROS_INFO("Trajectory planning request successful - executing...");
-//        ki.execute(traj);
+        executeTrajectory(traj);
         ROS_INFO("Trajectory execution complete.");
     }
 
+    getState(jnt_state);
     ROS_INFO("Planning for second target...");
-    if(ki.plan(init, -0.3, -0.3, 0.7, traj)) {
+    if(ki.plan(jnt_state, -0.3, -0.4, 0.8, 1.0, 0.0, 1.0, traj)) {
         ROS_INFO("Trajectory planning request successful - executing...");
-//        ki.execute(traj);
+        executeTrajectory(traj);
         ROS_INFO("Trajectory execution complete.");
     }
 
     ROS_INFO("Test run complete");
 
 }
-
-//void test2() {
-
-//    ors::KinematicWorld world("kuka.kvg");
-
-//    ors::Shape *target = world.getShapeByName("target");
-////    target->X.addRelativeTranslation(0.0, 0.0, 1.6);
-
-//    cout << "Target body.x.pos: " << target->body->X.pos << endl;
-//    cout << "Target rel.pos: " << target->rel.pos << endl;
-//    cout << "Target X.pos: " << target->X.pos << endl;
-//    world.watch(true);
-
-//    target->X.addRelativeTranslation(0.1, 0.1, -0.1);
-
-//    cout << "Target body.x.pos: " << target->body->X.pos << endl;
-//    cout << "Target rel.pos: " << target->rel.pos << endl;
-//    cout << "Target X.pos: " << target->X.pos << endl;
-
-//    world.watch(true);
-
-//    target->reset();
-//    target->X.addRelativeTranslation(0.0, 0.0, 0.4);
-
-//    cout << "Target body.x.pos: " << target->body->X.pos << endl;
-//    cout << "Target rel.pos: " << target->rel.pos << endl;
-//    cout << "Target X.pos: " << target->X.pos << endl;
-
-//    world.watch(true);
-
-//    target->X.pos = ors::Vector(0.0, 0.0, 1.3);
-
-//    cout << "Target body.x.pos: " << target->body->X.pos << endl;
-//    cout << "Target rel.pos: " << target->rel.pos << endl;
-//    cout << "Target X.pos: " << target->X.pos << endl;
-
-//    world.watch(true);
-
-//}
 
 int main(int argc,char** argv) {
     MT::initCmdLine(argc,argv);

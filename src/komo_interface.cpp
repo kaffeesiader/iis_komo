@@ -143,7 +143,7 @@ bool KomoInterface::planTo(ors::KinematicWorld &world,
     traj = x;
 
 //    world.watch(true);
-    displayTrajectory(x, 1, world, "trajectory", 0.1);
+    displayTrajectory(x, 1, world, "trajectory", 0.05);
 
     return true;
 }

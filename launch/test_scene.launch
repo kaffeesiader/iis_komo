@@ -1,0 +1,21 @@
+<launch>
+
+    <include file="$(find iis_simulation)/launch/robot_scene.launch">
+      <arg name="scene" value="test_scene.ttt" />
+    </include>
+    
+    <!-- switch to control mode 10 -->
+    <node name="pub_sim_joint_ctrl" 
+	  pkg="rostopic" 
+	  type="rostopic" 
+	  output="screen" 
+	  args="pub /simulation/right_arm/settings/switch_mode std_msgs/Int32 10" />
+	  
+    <!-- raise velocity limit -->
+    <node name="pub_sim_velo_limit" 
+	  pkg="rostopic" 
+	  type="rostopic" 
+	  output="screen" 
+	  args="pub /simulation/right_arm/joint_control/set_velocity_limit std_msgs/Float32 1.5" />
+	  
+</launch>
