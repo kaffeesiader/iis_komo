@@ -1,0 +1,10 @@
+# QTCreator
+*.user
+
+# KOMO
+
+config/*.AugmentedLagrangian
+config/*.costReport
+config/*.costReport.plt
+config/*.opt
+config/*.log

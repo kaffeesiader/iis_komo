@@ -1,0 +1,4 @@
+#ifndef KOMO_INTERFACE_H
+#define KOMO_INTERFACE_H
+
+#endif // KOMO_INTERFACE_H

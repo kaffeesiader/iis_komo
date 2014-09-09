@@ -1,0 +1,14 @@
+iis_komo
+========
+
+This package contains prototype code to integrate the KOMO framework into the iis_lab setup.
+The code within that package depends on the KOMO code which is not a catkin package.
+Therefore the environment variable KOMO_PATH has to point to the KOMO root directory.
+
+The execution depends on a set of configuration files, located in the config folder. The sample will
+only work correct if current working directory points to that file. Run the sample, using
+
+  cd iis_komo/config
+  rosrun iis_komo komo_easy
+  
+Now it should work.
