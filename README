@@ -8,7 +8,31 @@ Therefore the environment variable KOMO_PATH has to point to the KOMO root direc
 The execution depends on a set of configuration files, located in the config folder. The sample will
 only work correct if current working directory points to that file. Run the sample, using
 
-  cd iis_komo/config
+  roscd iis_komo/config
   rosrun iis_komo komo_easy
   
 Now it should work.
+
+Status:
+=======
+
+Class komo_interface can be used to send planning requests to KOMO framework.
+Two methods are currently available - plan for position only or plan for position and orientation.
+
+
+Open questions:
+==============
+
+What does the following parameters mean?
+- within MT.cfg:
+
+  transitionType = 1
+  Hrate = 1e-0
+  timeSteps = 100	this is the amount of waypoints, the resulting path contains
+  duration = 3.
+  
+How can be determined if planning was successful (in terms of some tolerances) ?
+
+  - By evaluating the resulting costs, but how can they be interpreted?
+  - Was there a collision?
+  - Was the goal pose reached at all?

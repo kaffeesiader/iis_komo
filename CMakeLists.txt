@@ -42,19 +42,13 @@ link_directories(
 )
 
 ## Declare a cpp library
-# add_library(iis_komo
-#   src/${PROJECT_NAME}/iis_komo.cpp
-# )
+add_library(komo_interface src/komo_interface.cpp)
+target_link_libraries(komo_interface Ors Core Motion ${catkin_LIBRARIES})
+set_target_properties(komo_interface PROPERTIES COMPILE_FLAGS -std=c++0x)
+
 
 ## Declare a cpp executable
 add_executable(komo_easy src/main.cpp)
-target_link_libraries(komo_easy Ors Core Motion ${catkin_LIBRARIES})
+add_dependencies(komo_easy komo_interface)
+target_link_libraries(komo_easy komo_interface ${catkin_LIBRARIES})
 set_target_properties(komo_easy PROPERTIES COMPILE_FLAGS -std=c++0x)
-## Add cmake target dependencies of the executable/library
-## as an example, message headers may need to be generated before nodes
-# add_dependencies(iis_komo_node iis_komo_generate_messages_cpp)
-
-## Specify libraries to link a library or executable target against
-# target_link_libraries(iis_komo_node
-#   ${catkin_LIBRARIES}
-# )
