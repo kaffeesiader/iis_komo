@@ -14,9 +14,15 @@ using namespace ros;
 using namespace std;
 
 ros::Publisher _pub_move;
+bool _execution_allowed;
 
 void executeTrajectory(arr trajectory)
 {
+
+    if(!_execution_allowed) {
+        return;
+    }
+
     std_msgs::Float64MultiArray msg;
     msg.layout.dim.resize(1);
     msg.layout.dim[0].size = 7;
@@ -66,24 +72,37 @@ void runTest(iis_komo::KomoInterface &ki) {
 
     ROS_INFO("Starting test run...");
 
-    ROS_INFO("Planning for first target...");
+    ROS_INFO("Planning for first target (position only)...");
 
     vector<double> jnt_state;
     getState(jnt_state);
 
     arr traj;
-    if(ki.plan(jnt_state, 0.3, 0.3, 0.5, -1.5, 0.0, -1.0, traj)) {
+    if(ki.plan(jnt_state, 0.5, 0.0, 0.8, traj)) {
         ROS_INFO("Trajectory planning request successful - executing...");
         executeTrajectory(traj);
         ROS_INFO("Trajectory execution complete.");
     }
 
-    getState(jnt_state);
-    ROS_INFO("Planning for second target...");
-    if(ki.plan(jnt_state, -0.3, -0.4, 0.8, 1.0, 0.0, 1.0, traj)) {
-        ROS_INFO("Trajectory planning request successful - executing...");
-        executeTrajectory(traj);
-        ROS_INFO("Trajectory execution complete.");
+    ROS_INFO("Planning for named goals...");
+
+    int i = 1;
+    while(true) {
+        // iterate through named goals...
+        stringstream ss;
+        ss << "goal" << i;
+        string goal_name = ss.str();
+        cout << goal_name << " " << i << endl;
+
+        getState(jnt_state);
+        if(ki.plan(jnt_state, goal_name, traj)) {
+            ROS_INFO_STREAM("Trajectory planning for " << goal_name << " successful - executing...");
+            executeTrajectory(traj);
+            ROS_INFO("Trajectory execution complete.");
+            i++;
+        } else {
+            break;
+        }
     }
 
     ROS_INFO("Test run complete");
@@ -99,6 +118,7 @@ int main(int argc,char** argv) {
 
     NodeHandle nh;
     _pub_move = nh.advertise<std_msgs::Float64MultiArray>(JOINT_MOVE_TOPIC, 1, false);
+    _execution_allowed = true;
 
     iis_komo::KomoInterface ki("kuka.kvg");
     runTest(ki);

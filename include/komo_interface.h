@@ -23,6 +23,8 @@ public:
     // with start state
     bool plan(const vector<double> &start_state, double x, double y, double z, arr &traj);
     bool plan(const vector<double> &start_state, double x, double y, double z, double roll, double pitch, double yaw, arr &traj);
+    bool plan(const vector<double> &start_state, const string &goal_name, arr &traj);
+
 
 private:
 

@@ -58,6 +58,7 @@ bool KomoInterface::plan(const vector<double> &start_state, double x, double y, 
     // ...and orientation
     ors::Quaternion q;
     q.setRpy(roll, pitch, yaw);
+
     target->rel.rot = q;
 
     ors::Shape *eef = _world->getShapeByName("endeff");
@@ -65,6 +66,24 @@ bool KomoInterface::plan(const vector<double> &start_state, double x, double y, 
     // make planning request and align all axes
     return planTo(*_world, *eef, *target, traj, 7);
 
+}
+
+bool KomoInterface::plan(const vector<double> &start_state, const string &goal_name, arr &traj)
+{
+    // set initial position
+    arr init_pos(&start_state[0], 7);
+    _world->setJointState(init_pos);
+
+    ors::Shape *target = _world->getShapeByName(goal_name.c_str());
+
+    if(target) {
+        ors::Shape *eef = _world->getShapeByName("endeff");
+        // make planning request and align all axes
+        return planTo(*_world, *eef, *target, traj, 7);
+    } else {
+        cerr << "Unable to find shape with name '" << goal_name << "'" << endl;
+        return false;
+    }
 }
 
 bool KomoInterface::planTo(ors::KinematicWorld &world,
@@ -81,6 +100,7 @@ bool KomoInterface::planTo(ors::KinematicWorld &world,
     double zeroVelPrec = MT::getParameter<double>("KOMO/moveTo/finalVelocityZeroPrecision", 1e1);
     double alignPrec = MT::getParameter<double>("KOMO/moveTo/alignPrecision", 1e4); // original 1e3
 
+    cout << "MARGIN: " << margin << endl;
     //-- set up the MotionProblem
     target.cont = false;
 

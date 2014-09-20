@@ -1,4 +1,4 @@
-body kuka_arm_base_link {  mass=2.0  inertiaTensor=[0.00381666666667 0 0 0.0036 0 0.00381666666667]  rel=<T t(0 0 0.0) E(0 0 0)>  type=3 mesh='meshes/base.stl' }
+body kuka_arm_base_link { X=<T t(0 0 1.1) d(110 1 0 0) d(30 0 1 0)> mass=2.0  inertiaTensor=[0.00381666666667 0 0 0.0036 0 0.00381666666667]  rel=<T t(0 0 0.0) E(0 0 0)>  type=3 mesh='meshes/base.stl' }
 body kuka_arm_1_link {  mass=2.0  inertiaTensor=[0.0136666666667 0 0 0.003 0 0.0118666666667]  rel=<T t(0 0 0.0) E(0 0 0)>  type=3 mesh='meshes/link_1.stl' }
 body kuka_arm_2_link {  mass=2.0  inertiaTensor=[0.0136666666667 0 0 0.003 0 0.0118666666667]  rel=<T t(0 0 0.0) E(0 0 0)>  type=3 mesh='meshes/link_2.stl' }
 body kuka_arm_3_link {  mass=2.0  inertiaTensor=[0.0136666666667 0 0 0.003 0 0.0118666666667]  rel=<T t(0 0 0.0) E(0 0 0)>  type=3 mesh='meshes/link_3.stl' }
