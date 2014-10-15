@@ -1,0 +1,6 @@
+%include left_arm.ors
+%include right_arm.ors
+%include torso.ors
+%include table.ors
+%include right_sdh.ors
+%include left_sdh.ors

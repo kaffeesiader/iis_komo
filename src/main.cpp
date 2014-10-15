@@ -94,7 +94,14 @@ void runTest(iis_komo::KomoInterface &ki) {
         string goal_name = ss.str();
         cout << goal_name << " " << i << endl;
 
-        getState(jnt_state);
+        // use last trajectory point as initial state...
+        jnt_state.clear();
+        arr last_pt = traj[traj.d0-1];
+        for (int i = 0; i < 7; ++i) {
+            jnt_state.push_back(last_pt(i));
+        }
+
+
         if(ki.plan(jnt_state, goal_name, traj)) {
             ROS_INFO_STREAM("Trajectory planning for " << goal_name << " successful - executing...");
             executeTrajectory(traj);
@@ -118,10 +125,12 @@ int main(int argc,char** argv) {
 
     NodeHandle nh;
     _pub_move = nh.advertise<std_msgs::Float64MultiArray>(JOINT_MOVE_TOPIC, 1, false);
-    _execution_allowed = true;
+    _execution_allowed = false;
 
-    iis_komo::KomoInterface ki("kuka.kvg");
-    runTest(ki);
+//    iis_komo::KomoInterface ki("kuka.kvg");
+    iis_komo::KomoInterface ki("test.kvg");
+    ki.display();
+//    runTest(ki);
 
     spinner.stop();
     return EXIT_SUCCESS;

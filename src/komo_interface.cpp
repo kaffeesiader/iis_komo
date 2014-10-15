@@ -13,7 +13,7 @@ KomoInterface::KomoInterface(const string &config_name)
 {
     _world = new ors::KinematicWorld(config_name.c_str());
     // used in example - don't know if really necessary...
-    makeConvexHulls(_world->shapes);
+//    makeConvexHulls(_world->shapes);
     // enable collision checking for all shapes
     for(ors::Shape *s:_world->shapes) {
         s->cont = true;
@@ -84,6 +84,11 @@ bool KomoInterface::plan(const vector<double> &start_state, const string &goal_n
         cerr << "Unable to find shape with name '" << goal_name << "'" << endl;
         return false;
     }
+}
+
+void KomoInterface::display()
+{
+    _world->watch(true);
 }
 
 bool KomoInterface::planTo(ors::KinematicWorld &world,

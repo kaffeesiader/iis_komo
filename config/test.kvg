@@ -1,0 +1,4 @@
+%include ../data/kuka_schunk/kuka_schunk.ors
+%include env.ors
+
+# shape endeff(kuka_arm_7_link){ rel=<T t(0 0 0.00)> type=5 color=[1 0 0] size=[.1 0 0 0]}
