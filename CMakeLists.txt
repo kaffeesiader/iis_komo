@@ -52,3 +52,8 @@ add_executable(komo_easy src/main.cpp)
 add_dependencies(komo_easy komo_interface)
 target_link_libraries(komo_easy komo_interface ${catkin_LIBRARIES})
 set_target_properties(komo_easy PROPERTIES COMPILE_FLAGS -std=c++0x)
+
+add_executable(komo_test src/test.cpp)
+add_dependencies(komo_test komo_interface)
+target_link_libraries(komo_test komo_interface ${catkin_LIBRARIES})
+set_target_properties(komo_test PROPERTIES COMPILE_FLAGS -std=c++0x)

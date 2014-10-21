@@ -119,20 +119,21 @@ void runTest(iis_komo::KomoInterface &ki) {
 int main(int argc,char** argv) {
     MT::initCmdLine(argc,argv);
 
-    ros::init(argc, argv, "iis_komo_test");
-    ros::AsyncSpinner spinner(1);
-    spinner.start();
+	ros::init(argc, argv, "iis_komo_test");
+	ros::AsyncSpinner spinner(1);
+	spinner.start();
 
-    NodeHandle nh;
-    _pub_move = nh.advertise<std_msgs::Float64MultiArray>(JOINT_MOVE_TOPIC, 1, false);
+	NodeHandle nh;
+	_pub_move = nh.advertise<std_msgs::Float64MultiArray>(JOINT_MOVE_TOPIC, 1, false);
     _execution_allowed = false;
 
 //    iis_komo::KomoInterface ki("kuka.kvg");
-    iis_komo::KomoInterface ki("test.kvg");
+	iis_komo::KomoInterface ki("iis_robot.kvg");
     ki.display();
-//    runTest(ki);
 
-    spinner.stop();
+	runTest(ki);
+
+	spinner.stop();
     return EXIT_SUCCESS;
 }
 
