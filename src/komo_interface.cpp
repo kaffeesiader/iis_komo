@@ -124,13 +124,13 @@ bool KomoInterface::planTo(ors::KinematicWorld &world,
 	MotionProblem MP(world);
 	//  MP.loadTransitionParameters(); //->move transition costs to tasks!
 	world.swift().initActivations(world);
-	MP.world.watch(true);
+//	MP.world.watch(true);
 
 	TaskCost *c;
 	c = MP.addTask("endeff_pos", new DefaultTaskMap(posTMT, endeff.index, NoVector, target.index, NoVector));
 	c->setCostSpecs(MP.T, MP.T, {0.}, posPrec);
 
-	c = MP.addTask("endeff_vel", new DefaultTaskMap(posTMT, world, "endeff")); //endeff.index));
+	c = MP.addTask("endeff_vel", new DefaultTaskMap(posTMT, world, endeff.name)); //endeff.index));
 	//  c = MP.addTask("q_vel", new DefaultTaskMap(qItselfTMT, world));
 	c->setCostSpecs(MP.T, MP.T, {0.}, zeroVelPrec);
 	c->map.order=1; //make this a velocity variable!

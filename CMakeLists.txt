@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(iis_komo)
 
+set(CMAKE_BUILD_TYPE Debug)
+
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
@@ -57,3 +59,7 @@ add_executable(komo_test src/test.cpp)
 add_dependencies(komo_test komo_interface)
 target_link_libraries(komo_test komo_interface ${catkin_LIBRARIES})
 set_target_properties(komo_test PROPERTIES COMPILE_FLAGS -std=c++0x)
+
+add_executable(komo_info src/info.cpp)
+target_link_libraries(komo_info Ors Core Motion ${catkin_LIBRARIES})
+set_target_properties(komo_info PROPERTIES COMPILE_FLAGS -std=c++0x)

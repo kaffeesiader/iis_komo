@@ -1,8 +1,7 @@
 #!/bin/bash
 
-# OLD_PATH = pwd
+FILE=`pwd`/$1
+echo $FILE
 
 cd $KOMO_PATH/examples/Ors/ors_editor/
-./x.exe /home/martin/ros/catkin_martin/src/iis_komo/data/$1
-
-# cd $OLD_PATH
+./x.exe -file $FILE $2

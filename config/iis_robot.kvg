@@ -7,5 +7,5 @@
 
 %include env.ors
 
-shape endeff(right_arm_7_link){ rel=<T t(0.05 0 0)> type=5 color=[1 0 0] size=[.1 0 0 0]}
-#shape left_eef(left_arm_7_link){ rel=<T t(0.05 0 0)> type=5 color=[1 0 0] size=[.1 0 0 0]}
+shape right_eef(right_arm_7_link){ rel=<T t(0.05 0 0)> type=5 color=[1 0 0] size=[.1 0 0 0]}
+shape left_eef(left_arm_7_link){ rel=<T t(0.05 0 0)> type=5 color=[1 0 0] size=[.1 0 0 0]}

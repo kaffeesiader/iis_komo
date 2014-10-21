@@ -1,5 +1,4 @@
 #include <Ors/ors.h>
-#include <Motion/komo.h>
 #include <std_msgs/Float64MultiArray.h>
 #include <sensor_msgs/JointState.h>
 #include <ros/ros.h>
@@ -75,19 +74,25 @@ void runTest(iis_komo::KomoInterface &ki) {
 	ROS_INFO("Planning for first target (position only)...");
 
 	arr traj;
-	if(ki.plan("endeff", "target1", traj)) {
+	if(ki.plan("right_eef", "target1", traj)) {
 //		ROS_INFO("Trajectory planning request successful - executing...");
 //		executeTrajectory(traj);
 //		ROS_INFO("Trajectory execution complete.");
 	}
 
-	if(ki.plan("endeff", "target2", traj)) {
+	if(ki.plan("right_eef", "target2", traj)) {
 //		ROS_INFO("Trajectory planning request successful - executing...");
 //		executeTrajectory(traj);
 //		ROS_INFO("Trajectory execution complete.");
 	}
 
-	if(ki.plan("endeff", "target1", traj)) {
+	if(ki.plan("right_eef", "target1", traj)) {
+//		ROS_INFO("Trajectory planning request successful - executing...");
+//		executeTrajectory(traj);
+//		ROS_INFO("Trajectory execution complete.");
+	}
+
+	if(ki.plan("left_eef", "target3", traj)) {
 //		ROS_INFO("Trajectory planning request successful - executing...");
 //		executeTrajectory(traj);
 //		ROS_INFO("Trajectory execution complete.");
