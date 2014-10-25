@@ -104,7 +104,7 @@ bool KomoWrapper::plan(const string &eef, double x, double y, double z, const II
 	target->rel.pos = targetPos;
 
 	ors::Shape *endeff = _world->getShapeByName(eef.c_str());
-	if(!target) {
+	if(!endeff) {
 		cerr << "Unable to find shape with name '" << eef << "'" << endl;
 		return false;
 	}
@@ -140,7 +140,7 @@ bool KomoWrapper::plan(const string &eef, double x, double y, double z, double r
 	target->rel.rot = q;
 
 	ors::Shape *endeff = _world->getShapeByName(eef.c_str());
-	if(!target) {
+	if(!endeff) {
 		cerr << "Unable to find shape with name '" << eef << "'" << endl;
 		return false;
 	}
@@ -176,7 +176,7 @@ bool KomoWrapper::plan(const string &eef, double x, double y, double z, double q
 	target->rel.rot = q;
 
 	ors::Shape *endeff = _world->getShapeByName(eef.c_str());
-	if(!target) {
+	if(!endeff) {
 		cerr << "Unable to find shape with name '" << eef << "'" << endl;
 		return false;
 	}
@@ -263,11 +263,12 @@ bool KomoWrapper::planTo(ors::KinematicWorld &world,
 	//-- optimize
 	ors::KinematicWorld::setJointStateCount=0;
 	for(uint k=0;k<iterate;k++){
+		world.watch(false, "planning...");
 		MT::timerStart();
 		if(colPrec<0){
 			// verbose=2 shows gnuplot after optimization process
 			// verbose=1 shows optimization steps
-			optConstrained(x, NoArr, Convert(MF), OPT(verbose=0, stopIters=100, maxStep=.5, stepInc=2., allowOverstep=false));
+			optConstrained(x, NoArr, Convert(MF), OPT(verbose=1, stopIters=100, maxStep=.5, stepInc=2., allowOverstep=false));
 			//verbose=2, stopIters=100, maxStep=.5, stepInc=2./*, nonStrictSteps=(!k?15:5)*/));
 		}else{
 			optNewton(x, Convert(MF), OPT(verbose=2, stopIters=100, maxStep=.5, stepInc=2., nonStrictSteps=(!k?15:5)));
@@ -285,8 +286,8 @@ bool KomoWrapper::planTo(ors::KinematicWorld &world,
 	world.setJointState(final_state);
 	world.calc_fwdPropagateFrames();
 
-	cout << "EEF final pos: " << endeff.X.pos << endl;
-	cout << "Target pos:    " << target.X.pos << endl;
+	cout << "EEF final pos:  " << endeff.X.pos << endl;
+	cout << "EEF target pos: " << target.X.pos << endl;
 
 	if(validateResult(x, endeff, target)) {
 		traj = x;

@@ -51,12 +51,15 @@ void RobotInterface::execute(const vector<IISRobotState> &path)
 		arr n_state_right(&next_wp.right_arm[0], 7);
 		arr diff_right = n_state_right - c_state_right;
 
+		// how many interpolation steps ?
+		double steps = 12;
+
 		// ... calculate interpolation step based on loop rate ...
-		arr step_left = diff_left / 10.0;
-		arr step_right = diff_right / 10.0;
+		arr step_left = diff_left / steps;
+		arr step_right = diff_right / steps;
 
 		// ... and move subsequently towards next position.
-		for (int j = 0; j < 10; ++j) {
+		for (int j = 0; j < steps; ++j) {
 
 			for(int k = 0; k < 7; ++k) {
 				msg_left.data[k] = c_state_left(k);

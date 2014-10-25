@@ -7,6 +7,13 @@ int main(int argc, char *argv[])
 {
 	ors::KinematicWorld w("iis_robot.kvg");
 
+	ors::Shape *rgl = w.getShapeByName("left_sdh_grasp_link");
+	if(!rgl) {
+		cout << "Link not found!" << endl;
+	} else {
+		cout << "Link found!" << endl;
+	}
+
 	ors::Body *b = new ors::Body(w);
 
 	ors::Shape *s = new ors::Shape(w, *b, NULL, false);
