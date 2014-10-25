@@ -8,3 +8,4 @@ config/*.costReport
 config/*.costReport.plt
 config/*.opt
 config/*.log
+config/z.*

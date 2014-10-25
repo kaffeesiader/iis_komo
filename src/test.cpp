@@ -2,63 +2,31 @@
 #include <std_msgs/Float64MultiArray.h>
 #include <sensor_msgs/JointState.h>
 #include <ros/ros.h>
-#include <komo_interface.h>
 #include <robot_interface.h>
-
-
-#define JOINT_STATES_TOPIC "/simulation/right_arm/joint_control/get_state"
-#define JOINT_MOVE_TOPIC "/simulation/right_arm/joint_control/move"
-
 
 using namespace ros;
 using namespace std;
 
 
-void runTest(iis_komo::KomoInterface &ki, iis_komo::RobotInterface &ri) {
-
-	ROS_INFO("Starting test run...");
-
-	ROS_INFO("Planning for first target (position only)...");
-
-	arr traj;
-	if(ki.plan("right_eef", "target1", traj)) {
-		ROS_INFO("Trajectory planning request successful - executing...");
-//		ri.executePath(traj, "right");
-		ROS_INFO("Trajectory execution complete.");
-	}
-
-	if(ki.plan("right_eef", "target2", traj)) {
-//		ROS_INFO("Trajectory planning request successful - executing...");
-//		ri.executePath(traj, "right");
-//		ROS_INFO("Trajectory execution complete.");
-	}
-
-	if(ki.plan("left_eef", "target3", traj)) {
-//		ROS_INFO("Trajectory planning request successful - executing...");
-//		ri.executePath(traj, "left");
-//		ROS_INFO("Trajectory execution complete.");
-	}
-
-	ROS_INFO("Test run complete");
-
-}
-
 int main(int argc,char** argv) {
-	MT::initCmdLine(argc,argv);
 
-	ros::init(argc, argv, "iis_komo_test");
-	ros::AsyncSpinner spinner(4);
-	spinner.start();
+	double d[] = {0.0,1.0,2.0,3.0,4.0,5.0,6.0};
+	arr test(&d[0], 7);
 
-	NodeHandle nh("simulation");
+	cout << "Test: " << test << endl;
 
-	ors::KinematicWorld world("iis_robot.kvg");
-	iis_komo::KomoInterface ki(&world);
-	iis_komo::RobotInterface ri(nh);
+	vector<double> v;
+	v.push_back(0.0);
+	v.push_back(1.0);
+	v.push_back(2.0);
+	v.push_back(3.0);
+	v.push_back(4.0);
+	v.push_back(5.0);
+	v.push_back(6.0);
 
-	runTest(ki, ri);
+	arr test2(&v[0], 7);
+	cout << "Test2: " << test2 << endl;
 
-	spinner.stop();
 	return EXIT_SUCCESS;
 }
 

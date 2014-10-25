@@ -14,12 +14,11 @@ namespace iis_komo {
 KomoWrapper::KomoWrapper(const string &config_name)
 {
 	_world = new ors::KinematicWorld(config_name.c_str());
-	cout << _world->getJointStateDimension() << endl;
-	CHECK(_world->getJointStateDimension() >= 14, "Provided ors description does not contain two arms!");
+	CHECK(_world->getJointStateDimension() >= 14, "Wrong joint state dimension! Provided ors description is invalid!");
 	// enable collision checking for all shapes
-//	for(ors::Shape *s:_world->shapes) {
-//        s->cont = true;
-//	}
+	for(ors::Shape *s:_world->shapes) {
+		s->cont = true;
+	}
 
 }
 
@@ -73,7 +72,7 @@ void KomoWrapper::getGripperState(const string &arm, const double *state)
 	cout << "Getting gripper joint positions is not implemented yet!!!" << endl;
 }
 
-void KomoWrapper::arrToPath(const arr &traj, vector<IISRobotState> &path)
+void KomoWrapper::arrToPath(const arr &traj, std::vector<IISRobotState> &path)
 {
 	// traverse through all trajectory points
 	for (int i = 0; i < traj.d0; ++i) {
@@ -84,6 +83,8 @@ void KomoWrapper::arrToPath(const arr &traj, vector<IISRobotState> &path)
 			state.left_arm[j] = pt(getWorldJointIndex("left", j));
 			state.right_arm[j] = pt(getWorldJointIndex("right", j));
 		}
+		// add extracted state to path
+		path.push_back(state);
 	}
 }
 
@@ -272,7 +273,7 @@ bool KomoWrapper::planTo(ors::KinematicWorld &world,
 		cout <<"** optimization time=" <<MT::timerRead()
 			 <<" setJointStateCount=" <<ors::KinematicWorld::setJointStateCount <<endl;
 		//    checkJacobian(Convert(MF), x, 1e-5);
-		MP.costReport();
+//		MP.costReport();
 	}
 
 //	arr final_state = x[x.d0-1];
@@ -287,6 +288,11 @@ bool KomoWrapper::planTo(ors::KinematicWorld &world,
 		traj = x;
 		displayTrajectory(x, 1, world, "Planning result", 0.05);
 		cout << "Optimization process finished" << endl;
+		// set current state to final state (just for visualization...)
+//		arr final_state = x[x.d0-1];
+//		world.setJointState(final_state);
+//		world.watch(false, "Starting execution...");
+
 		return true;
 	} else {
 		return false;

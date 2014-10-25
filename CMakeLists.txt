@@ -89,10 +89,9 @@ set_target_properties(iis_komo PROPERTIES COMPILE_FLAGS -std=c++0x)
 #target_link_libraries(komo_easy komo_interface ${catkin_LIBRARIES})
 #set_target_properties(komo_easy PROPERTIES COMPILE_FLAGS -std=c++0x)
 
-#add_executable(komo_test src/test.cpp)
-#add_dependencies(komo_test komo_interface)
-#target_link_libraries(komo_test komo_interface robot_interface ${catkin_LIBRARIES})
-#set_target_properties(komo_test PROPERTIES COMPILE_FLAGS -std=c++0x)
+add_executable(komo_test src/test.cpp)
+target_link_libraries(komo_test Core ${catkin_LIBRARIES})
+set_target_properties(komo_test PROPERTIES COMPILE_FLAGS -std=c++0x)
 
 add_executable(komo_info src/info.cpp)
 target_link_libraries(komo_info Ors Core Motion ${catkin_LIBRARIES})

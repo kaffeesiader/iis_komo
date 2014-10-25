@@ -79,14 +79,19 @@ private:
 			ROS_ERROR("Unable to plan - invalid target specification!");
 			return false;
 		}
+
 		if(path.size() > 0) {
-			ROS_INFO("Planning successful - executing trajectory");
+			ROS_INFO("Planning successful - executing trajectory...");
 			_robot->execute(path);
+			ROS_INFO("Trajectory execution complete.");
 			response.result = true;
 		} else {
 			ROS_WARN("Planning failed!");
 			response.result = false;
 		}
+
+		ROS_INFO("Planning request completed!");
+
 		return true;
 	}
 };
@@ -97,8 +102,10 @@ int main(int argc, char *argv[])
 {
 	MT::initCmdLine(argc, argv);
 	ros::init(argc, argv, "iis_komo");
+	AsyncSpinner spinner(2);
+	spinner.start();
 
-	NodeHandle nh("simulation");
+	NodeHandle nh;
 
 	ROS_INFO("Starting IIS_KOMO node...");
 
@@ -106,12 +113,10 @@ int main(int argc, char *argv[])
 	iis_komo::RobotInterface robot(nh);
 	iis_komo::KomoInterface ki(nh, &wrapper, &robot);
 
-	ros::Rate rate(20);
+	ros::waitForShutdown();
 
-	while(ros::ok()) {
-		ros::spinOnce();
-		rate.sleep();
-	}
+	spinner.stop();
+	ROS_INFO("IIS_KOMO node shutdown completed.");
 
 	return EXIT_SUCCESS;
 }

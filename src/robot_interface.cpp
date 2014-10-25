@@ -13,7 +13,7 @@ RobotInterface::RobotInterface(NodeHandle &nh) {
 	_pub_right_arm_move = nh.advertise<std_msgs::Float64MultiArray>("right_arm/joint_control/move", 1, true);
 
 	_sub_left_arm_state = nh.subscribe("left_arm/joint_control/get_state", 1, &RobotInterface::CBLeftArmState, this);
-	_sub_right_arm_state = nh.subscribe("left_arm/joint_control/get_state", 1, &RobotInterface::CBRightArmState, this);
+	_sub_right_arm_state = nh.subscribe("right_arm/joint_control/get_state", 1, &RobotInterface::CBRightArmState, this);
 	_sub_left_sdh_state = nh.subscribe("left_sdh/joint_control/get_state", 1, &RobotInterface::CBLeftSdhState, this);
 	_sub_right_sdh_state = nh.subscribe("right_sdh/joint_control/get_state", 1, &RobotInterface::CBRightSdhState, this);
 }
@@ -43,12 +43,12 @@ void RobotInterface::execute(const vector<IISRobotState> &path)
 		const IISRobotState &current_wp = path[i-1];
 		const IISRobotState &next_wp = path[i];
 
-		arr c_state_left(current_wp.left_arm[0], 7);
-		arr n_state_left(next_wp.left_arm[0], 7);
+		arr c_state_left(&current_wp.left_arm[0], 7);
+		arr n_state_left(&next_wp.left_arm[0], 7);
 		arr diff_left = n_state_left - c_state_left;
 
-		arr c_state_right(current_wp.right_arm[0], 7);
-		arr n_state_right(next_wp.right_arm[0], 7);
+		arr c_state_right(&current_wp.right_arm[0], 7);
+		arr n_state_right(&next_wp.right_arm[0], 7);
 		arr diff_right = n_state_right - c_state_right;
 
 		// ... calculate interpolation step based on loop rate ...
@@ -79,6 +79,7 @@ void RobotInterface::CBLeftArmState(const sensor_msgs::JointStatePtr &msg)
 	for (int i = 0; i < 7; ++i) {
 		_current_state.left_arm[i] = msg->position[i];
 	}
+//	ROS_INFO("Left joint state received!");
 }
 
 void RobotInterface::CBRightArmState(const sensor_msgs::JointStatePtr &msg)
@@ -86,6 +87,7 @@ void RobotInterface::CBRightArmState(const sensor_msgs::JointStatePtr &msg)
 	for (int i = 0; i < 7; ++i) {
 		_current_state.right_arm[i] = msg->position[i];
 	}
+//	ROS_INFO("Right joint state received!");
 }
 
 void RobotInterface::CBLeftSdhState(const sensor_msgs::JointStatePtr &msg)
