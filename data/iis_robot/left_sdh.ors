@@ -12,8 +12,8 @@ body left_sdh_finger_23_link   {}
 
 # 107.4 to the root of the hand, then  98 (-10mm ring) to the finger joints
 joint (left_arm_7_link left_sdh_thumb_1_link)   { type=10 A=<T d(180 1 0 0) t(-0.0 0 0) d(90 0 1 0) t(-.038105    0   .113) d(-90 0 1 0)>, B=<T d(90 0 1 0)>, Q=<T d(0 1 0 0)> }
-joint (left_arm_7_link left_sdh_finger_11_link) { A=<T d(180 1 0 0) t(-0.0 0 0) d(90 0 1 0) t( .0190525  .033 .113) d(-90 0 1 0)>, B=<T d(90 0 1 0)>, Q=<T d( 5 1 0 0)>  }
-joint (left_arm_7_link left_sdh_finger_21_link) { A=<T d(180 1 0 0) t(-0.0 0 0) d(90 0 1 0) t( .0190525 -.033 .113) d(-90 0 1 0)>, B=<T d(90 0 1 0)>, Q=<T d(-5 1 0 0)>  }
+joint lf1 (left_arm_7_link left_sdh_finger_11_link) { A=<T d(180 1 0 0) t(-0.0 0 0) d(90 0 1 0) t( .0190525  .033 .113) d(-90 0 1 0)>, B=<T d(90 0 1 0)>, Q=<T d( 5 1 0 0)>  }
+joint (left_arm_7_link left_sdh_finger_21_link) { mimic=lf1 A=<T d(180 1 0 0) t(-0.0 0 0) d(90 0 1 0) t( .0190525 -.033 .113) d(-90 0 1 0)>, B=<T d(90 0 1 0)>, Q=<T d(-5 1 0 0)>  }
 
 ### THE ORDER IS IMPORTANT -- SHOULD CORRESPOND TO SCHUNK'S CONVENTION FOR ODERING!
 joint (left_sdh_finger_21_link left_sdh_finger_22_link) { A=<T d(-90 0 0 1)> }

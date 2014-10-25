@@ -36,3 +36,10 @@ How can be determined if planning was successful (in terms of some tolerances) ?
   - By evaluating the resulting costs, but how can they be interpreted?
   - Was there a collision?
   - Was the goal pose reached at all?
+
+
+TODO:
+
+- implement trajectory execution
+- implement ROS interface
+- what to do with hands?

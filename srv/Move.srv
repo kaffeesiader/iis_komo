@@ -1,0 +1,13 @@
+#
+# Plans a path, using the KOMO motion planner
+
+# the name of the end effector link
+string eef_link
+
+# description of the target position
+# 6 values mean [x,y,z,roll,pitch,yaw]
+# 7 values mean [x,y,z,qx,qy,qz,qw]
+# 3 values mean [x,y,z] (position only)
+float64[] target
+---
+bool result

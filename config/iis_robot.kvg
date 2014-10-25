@@ -1,9 +1,9 @@
-%include ../data/iis_robot/left_arm.ors
-%include ../data/iis_robot/right_arm.ors
-# %include ../data/iis_robot/torso.ors
-%include ../data/iis_robot/table.ors
-# %include ../data/iis_robot/right_sdh.ors
-# %include ../data/iis_robot/left_sdh.ors
+%include iis_robot/left_arm.ors
+%include iis_robot/right_arm.ors
+# %include iis_robot/torso.ors
+%include iis_robot/table.ors
+%include iis_robot/right_sdh.ors
+%include iis_robot/left_sdh.ors
 
 %include env.ors
 

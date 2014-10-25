@@ -1,0 +1,5 @@
+body table_plate_link { X=<T t(-0.029 -0.3 0) > }
+body table_surface_link { X=<T t(-0.429 -0.34 0) > }
+
+shape table_plate (table_plate_link)     { contact, type=0, rel=<T t(0.4 1.11 -0.015) >, size=[0.8 2.22 .03 .01], color=[.9 .85 .8] }
+shape table_surface (table_surface_link) { contact, type=0, rel=<T t(0.6 1.15  0.045) >, size=[1.2 2.3 .09 .01], color=[.9 .85 .8] }
