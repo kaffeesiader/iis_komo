@@ -190,9 +190,9 @@ bool KomoWrapper::plan(const string &eef, double x, double y, double z, double q
 	return success;
 }
 
-void KomoWrapper::display()
+void KomoWrapper::display(bool block, const char *msg)
 {
-	_world->watch(true);
+	_world->watch(block, msg);
 }
 
 
@@ -265,33 +265,38 @@ bool KomoWrapper::planTo(ors::KinematicWorld &world,
 	for(uint k=0;k<iterate;k++){
 		MT::timerStart();
 		if(colPrec<0){
-			optConstrained(x, NoArr, Convert(MF), OPT(verbose=2, stopIters=100, maxStep=.5, stepInc=2., allowOverstep=false));
-			//verbose=1, stopIters=100, maxStep=.5, stepInc=2./*, nonStrictSteps=(!k?15:5)*/));
+			// verbose=2 shows gnuplot after optimization process
+			// verbose=1 shows optimization steps
+			optConstrained(x, NoArr, Convert(MF), OPT(verbose=0, stopIters=100, maxStep=.5, stepInc=2., allowOverstep=false));
+			//verbose=2, stopIters=100, maxStep=.5, stepInc=2./*, nonStrictSteps=(!k?15:5)*/));
 		}else{
 			optNewton(x, Convert(MF), OPT(verbose=2, stopIters=100, maxStep=.5, stepInc=2., nonStrictSteps=(!k?15:5)));
 		}
-		cout <<"** optimization time=" <<MT::timerRead()
-			 <<" setJointStateCount=" <<ors::KinematicWorld::setJointStateCount <<endl;
+		double opt_time = MT::timerRead();
+		uint set_jnt_state_cnt = ors::KinematicWorld::setJointStateCount;
+		cout <<"** optimization time=" << opt_time
+			 <<" setJointStateCount=" << set_jnt_state_cnt;
 		//    checkJacobian(Convert(MF), x, 1e-5);
-//		MP.costReport();
+		MP.costReport(false);
 	}
 
-//	arr final_state = x[x.d0-1];
-//	world.setJointState(final_state);
+	// set current state to final state
+	arr final_state = x[x.d0-1];
+	world.setJointState(final_state);
+	world.calc_fwdPropagateFrames();
 
-//	cout << "Last point: " << final_state << endl;
 	cout << "EEF final pos: " << endeff.X.pos << endl;
 	cout << "Target pos:    " << target.X.pos << endl;
-//	cout << "EEF final rot: " << endeff.X.rot << endl;
 
 	if(validateResult(x, endeff, target)) {
 		traj = x;
-		displayTrajectory(x, 1, world, "Planning result", 0.05);
 		cout << "Optimization process finished" << endl;
-		// set current state to final state (just for visualization...)
-//		arr final_state = x[x.d0-1];
-//		world.setJointState(final_state);
-//		world.watch(false, "Starting execution...");
+		cout << "Optimization time:  " << MT::timerRead() << endl;
+		cout << "SetJointStateCount: " << ors::KinematicWorld::setJointStateCount << endl;
+		cout << "Displaying trajectory..." << endl;
+		displayTrajectory(x, 1, world, "Planning result", 0.05);
+
+		world.watch(false, "Ready...");
 
 		return true;
 	} else {

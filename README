@@ -11,7 +11,9 @@ only work correct if current working directory points to that file. Run the samp
   roscd iis_komo/config
   rosrun iis_komo komo_easy
   
-Now it should work.
+Now it should work. Therefore I created a launch script that allows to do that in one step.
+  scripts/run_komo.sh
+
 
 Status:
 =======
@@ -27,6 +29,7 @@ What does the following parameters mean?
 - within MT.cfg:
 
   transitionType = 1
+  Wrate = 1e0
   Hrate = 1e-0
   timeSteps = 100	this is the amount of waypoints, the resulting path contains
   duration = 3.
@@ -37,9 +40,12 @@ How can be determined if planning was successful (in terms of some tolerances) ?
   - Was there a collision?
   - Was the goal pose reached at all?
 
+Is it possible to explicitly plan just for one arm?
+
 
 TODO:
-
-- implement trajectory execution
-- implement ROS interface
-- what to do with hands?
+- improve trajectory execution!
+- implement trajectory validation
+- implement function for setting hand joint positions
+- provide service or topic that allows to add collision objects
+- create suitable torso model!!!

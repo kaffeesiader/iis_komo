@@ -18,6 +18,11 @@ public:
 		_komo = komo;
 		_robot = robot;
 		_move_srv = nh.advertiseService("motion_control/move", &KomoInterface::callbackMove, this);
+		// wait for initial state
+		sleep(1);
+
+		_komo->setState(_robot->getState());
+		_komo->display();
 	}
 
 private:
@@ -107,7 +112,7 @@ int main(int argc, char *argv[])
 
 	NodeHandle nh;
 
-	ROS_INFO("Starting IIS_KOMO node...");
+	ROS_INFO("Starting IIS_KOMO node in namespace '%s'...", nh.getNamespace().c_str());
 
 	iis_komo::KomoWrapper wrapper("iis_robot.kvg");
 	iis_komo::RobotInterface robot(nh);

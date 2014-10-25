@@ -34,7 +34,7 @@ public:
 
 	bool plan(const string eef, const string goal_name, arr &traj);
 
-    void display();
+	void display(bool block = false, const char *msg = "Ready...");
 
 private:
 

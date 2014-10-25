@@ -7,5 +7,15 @@
 
 %include env.ors
 
-shape right_eef(right_arm_7_link){ rel=<T t(0.05 0 0)> type=5 color=[1 0 0] size=[.1 0 0 0]}
-shape left_eef(left_arm_7_link){ rel=<T t(0.05 0 0)> type=5 color=[1 0 0] size=[.1 0 0 0]}
+# add some additional reference frames that can be used as planning links
+
+shape right_eef(right_arm_7_link){ rel=<T t(0 0 0) d(90 0 1 0) d(90 0 0 1) > type=5 color=[1 0 0] size=[.1 0 0 0]}
+shape right_shd_grasp_link(right_arm_7_link){ rel=<T t(0.15 0 0) d(90 0 1 0) d(180 0 0 1) > type=5 color=[1 0 0] size=[.1 0 0 0]}
+shape right_shd_tip_link(right_arm_7_link){ rel=<T t(0.22 0 0) d(90 0 1 0) d(180 0 0 1) > type=5 color=[1 0 0] size=[.1 0 0 0]}
+
+shape left_eef(left_arm_7_link){ rel=<T t(0 0 0) d(90 0 1 0) d(-90 0 0 1) > type=5 color=[1 0 0] size=[.1 0 0 0]}
+shape left_shd_grasp_link(left_arm_7_link){ rel=<T t(0.15 0 0) d(90 0 1 0) d(180 0 0 1) > type=5 color=[1 0 0] size=[.1 0 0 0]}
+shape left_shd_tip_link(left_arm_7_link){ rel=<T t(0.22 0 0) d(90 0 1 0) d(180 0 0 1) > type=5 color=[1 0 0] size=[.1 0 0 0]}
+
+# this is used as target - don't remove!!!
+body target { X=<T t(0.0 0.0 0.0) E(0 0 0)>  type=5 size=[.1 .05 .05 .05] color=[0 .5 0] fixed, }
