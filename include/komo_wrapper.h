@@ -40,9 +40,8 @@ private:
 
     ors::KinematicWorld *_world;
 
-
+	void setGripperJointPos(const string &joint, double pos);
 	void setGripperState(const string &arm, const double *state);
-	void getGripperState(const string &arm, const double *state);
 	int getWorldJointIndex(const string &arm, int idx);
 	void arrToPath(const arr &traj, vector<IISRobotState> &path);
 	// validates the planning outcome

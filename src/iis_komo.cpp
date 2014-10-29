@@ -85,16 +85,22 @@ private:
 			return false;
 		}
 
-		if(path.size() > 0) {
-			ROS_INFO("Planning successful - executing trajectory...");
-			_robot->execute(path);
-			ROS_INFO("Trajectory execution complete.");
-			response.result = true;
-		} else {
+		if(path.size() == 0) {
 			ROS_WARN("Planning failed!");
 			response.result = false;
+
+			return false;
 		}
 
+		ROS_INFO("Planning successful!");
+
+		if(!request.plan_only) {
+			ROS_INFO("Executing trajectory...");
+			_robot->execute(path);
+			ROS_INFO("Trajectory execution complete.");
+		}
+
+		response.result = true;
 		ROS_INFO("Planning request completed!");
 
 		return true;

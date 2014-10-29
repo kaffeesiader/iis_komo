@@ -64,12 +64,26 @@ void KomoWrapper::setState(const IISRobotState &state)
 
 void KomoWrapper::setGripperState(const string &arm, const double *state)
 {
-	cout << "Setting gripper joint positions is not implemented yet!!!" << endl;
+	setGripperJointPos(arm + "_sdh_knuckle_joint", state[0]);
+	setGripperJointPos(arm + "_sdh_finger_12_joint", state[1]);
+	setGripperJointPos(arm + "_sdh_finger_13_joint", state[2]);
+	setGripperJointPos(arm + "_sdh_thumb_2_joint", state[3]);
+	setGripperJointPos(arm + "_sdh_thumb_3_joint", state[4]);
+	setGripperJointPos(arm + "_sdh_finger_22_joint", state[5]);
+	setGripperJointPos(arm + "_sdh_finger_23_joint", state[6]);
+	// set state of mirrored joint
+	setGripperJointPos(arm + "_sdh_finger_21_joint", -state[0]);
 }
 
-void KomoWrapper::getGripperState(const string &arm, const double *state)
+void KomoWrapper::setGripperJointPos(const string &joint, double pos)
 {
-	cout << "Getting gripper joint positions is not implemented yet!!!" << endl;
+	ors::Joint *jnt = _world->getJointByName(joint.c_str());
+
+	if(!jnt) {
+		cerr << "Unable to set gripper joint position - no joint with name '" << joint << "' found in model!";
+	} else {
+		jnt->Q.rot.setRad(pos, 1, 0, 0);
+	}
 }
 
 void KomoWrapper::arrToPath(const arr &traj, std::vector<IISRobotState> &path)
@@ -195,7 +209,6 @@ void KomoWrapper::display(bool block, const char *msg)
 	_world->watch(block, msg);
 }
 
-
 bool KomoWrapper::validateResult(const arr &traj, ors::Shape &eef, ors::Shape &target, bool position_only)
 {
 	cout << "TRAJECTORY VALIDATION IS NOT IMPLEMENTED YET!!!" << endl;
@@ -216,8 +229,11 @@ bool KomoWrapper::planTo(ors::KinematicWorld &world,
 	double zeroVelPrec = MT::getParameter<double>("KOMO/moveTo/finalVelocityZeroPrecision", 1e1);
 	double alignPrec = MT::getParameter<double>("KOMO/moveTo/alignPrecision", 1e4); // original 1e3
 
-	cout << "MARGIN: " << margin << endl;
-	cout << "COLPRE: " << colPrec << endl;
+	cout << "Position precision     : " << posPrec << endl;
+	cout << "Align precision        : " << alignPrec << endl;
+	cout << "Collision margin       : " << margin << endl;
+	cout << "Zero velocity precision: " << zeroVelPrec << endl;
+	cout << "Collision precision    : " << colPrec << endl;
 
 	//-- set up the MotionProblem
 	target.cont=false;

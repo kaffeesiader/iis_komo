@@ -7,6 +7,13 @@ int main(int argc, char *argv[])
 {
 	ors::KinematicWorld w("iis_robot.kvg");
 
+	ors::Joint *jnt = w.getJointByName("right_sdh_finger_22_joint");
+	if(jnt) {
+		jnt->Q.rot.setRad(1.57,1, 0, 0);
+		w.calc_fwdPropagateFrames();
+		w.watch(true, "Joint state set!");
+	}
+
 	ors::Shape *rgl = w.getShapeByName("left_sdh_grasp_link");
 	if(!rgl) {
 		cout << "Link not found!" << endl;

@@ -9,5 +9,7 @@ string eef_link
 # 7 values mean [x,y,z,qx,qy,qz,qw]
 # 3 values mean [x,y,z] (position only)
 float64[] target
+# if true, the trajectory will not be executed
+bool plan_only
 ---
 bool result
