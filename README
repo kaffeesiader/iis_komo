@@ -21,6 +21,8 @@ Notes:
 - It's possible that a planning outcome violates joint limits - that has to be taken into account!!!
 - The robot can come into an unfortunate configuration that makes subsequent planning difficult
   This results in joint limit violations !!!
+- Modified ors.cpp to avoid that hand joint position are reset - check if that worked!
+- I set all arm joint limits 5 degrees lower than their actual hard limit!
 
 Open questions:
 ==============

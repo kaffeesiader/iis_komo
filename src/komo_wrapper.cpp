@@ -211,7 +211,60 @@ void KomoWrapper::display(bool block, const char *msg)
 
 bool KomoWrapper::validateResult(const arr &traj, ors::Shape &eef, ors::Shape &target, bool position_only)
 {
-	cout << "TRAJECTORY VALIDATION IS NOT IMPLEMENTED YET!!!" << endl;
+	arr final_state = traj[traj.d0-1];
+	_world->setJointState(final_state);
+	_world->calc_fwdPropagateFrames();
+
+	cout << "EEF final pos:  " << eef.X.pos << endl;
+	cout << "EEF target pos: " << target.X.pos << endl;
+
+	// check end effector position
+	double epsilon = 0.020;
+	ors::Vector dist = target.X.pos - eef.X.pos;
+	cout << "Position offset: " << dist.length() << endl;
+
+	if(dist.length() > epsilon) {
+		cerr << "Trajectory validation failed - position constraint not satisfied." << endl;
+		return false;
+	}
+	// ...and orientation if required
+	if(!position_only) {
+		cout << "ORIENTATION CONSTRAINT VALIDATION NOT IMPLEMENTED YET!" << endl;
+	}
+	// arm joint limits
+	double limits[] = {
+		2.96705972839,
+		2.09439510239,
+		2.96705972839,
+		2.09439510239,
+		2.96705972839,
+		2.09439510239,
+		2.96705972839
+					  };
+
+	// validation steps neccessary for each single point
+	for(int i = 0; i < traj.d0 - 1; ++i) {
+		arr pt = traj[i];
+		// validate joint limits
+		for (int j = 0; j < 7; ++j) {
+			int left_index = getWorldJointIndex("left", j);
+			int right_index = getWorldJointIndex("right", j);
+			double left_pos = pt(left_index);
+			double right_pos = pt(right_index);
+			double limit = limits[j];
+
+			if(left_pos > limit || left_pos < -limit) {
+				cerr << "Joint limit violated for joint " << j << " in left arm! Value: " << left_pos << endl;
+				return false;
+			}
+			if(right_pos > limit || right_pos < -limit) {
+				cerr << "Joint limit violated for joint " << j << " in right arm! Value: " << right_pos << endl;
+				return false;
+			}
+		}
+	}
+
+	cout << "Trajectory validation OK." << endl;
 	return true;
 }
 
@@ -228,13 +281,17 @@ bool KomoWrapper::planTo(ors::KinematicWorld &world,
 	double margin = MT::getParameter<double>("KOMO/moveTo/collisionMargin", .1);
 	double zeroVelPrec = MT::getParameter<double>("KOMO/moveTo/finalVelocityZeroPrecision", 1e1);
 	double alignPrec = MT::getParameter<double>("KOMO/moveTo/alignPrecision", 1e4); // original 1e3
+	double iterations = MT::getParameter<double>("KOMO/moveTo/iterations", 1);
 
 	cout << "Position precision     : " << posPrec << endl;
 	cout << "Align precision        : " << alignPrec << endl;
 	cout << "Collision margin       : " << margin << endl;
 	cout << "Zero velocity precision: " << zeroVelPrec << endl;
 	cout << "Collision precision    : " << colPrec << endl;
+	cout << "Iterations             : " << iterations << endl;
 
+	_world->calc_fwdPropagateShapeFrames();
+	display(false, "planning...");
 	//-- set up the MotionProblem
 	target.cont=false;
 
@@ -278,7 +335,7 @@ bool KomoWrapper::planTo(ors::KinematicWorld &world,
 
 	//-- optimize
 	ors::KinematicWorld::setJointStateCount=0;
-	for(uint k=0;k<iterate;k++){
+	for(uint k=0;k<iterations;k++){
 		world.watch(false, "planning...");
 		MT::timerStart();
 		if(colPrec<0){
@@ -297,28 +354,22 @@ bool KomoWrapper::planTo(ors::KinematicWorld &world,
 		MP.costReport(false);
 	}
 
-	// set current state to final state
-	arr final_state = x[x.d0-1];
-	world.setJointState(final_state);
-	world.calc_fwdPropagateFrames();
+	cout << "Optimization process finished" << endl;
+	cout << "Optimization time:  " << MT::timerRead() << endl;
+	cout << "SetJointStateCount: " << ors::KinematicWorld::setJointStateCount << endl;
+	cout << "Validating planning result..." << endl;
 
-	cout << "EEF final pos:  " << endeff.X.pos << endl;
-	cout << "EEF target pos: " << target.X.pos << endl;
+	bool pos_only = (whichAxesToAlign == 0);
+	bool valid = validateResult(x, endeff, target, pos_only);
 
-	if(validateResult(x, endeff, target)) {
+	if(valid) {
 		traj = x;
-		cout << "Optimization process finished" << endl;
-		cout << "Optimization time:  " << MT::timerRead() << endl;
-		cout << "SetJointStateCount: " << ors::KinematicWorld::setJointStateCount << endl;
-		cout << "Displaying trajectory..." << endl;
-		displayTrajectory(x, 1, world, "Planning result", 0.05);
-
-		world.watch(false, "Ready...");
-
-		return true;
-	} else {
-		return false;
 	}
+
+	cout << "Displaying trajectory..." << endl;
+	displayTrajectory(x, 1, world, "Planning result", 0.05);
+
+	world.watch(false, "Ready...");
 
 }
 

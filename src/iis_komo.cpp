@@ -82,14 +82,14 @@ private:
 			break;
 		default:
 			ROS_ERROR("Unable to plan - invalid target specification!");
-			return false;
+			return true;
 		}
 
 		if(path.size() == 0) {
 			ROS_WARN("Planning failed!");
 			response.result = false;
 
-			return false;
+			return true;
 		}
 
 		ROS_INFO("Planning successful!");

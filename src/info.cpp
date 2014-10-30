@@ -7,12 +7,18 @@ int main(int argc, char *argv[])
 {
 	ors::KinematicWorld w("iis_robot.kvg");
 
-	ors::Joint *jnt = w.getJointByName("right_sdh_finger_22_joint");
+	ors::Joint *jnt = w.getJointByName("right_sdh_finger_12_joint");
 	if(jnt) {
 		jnt->Q.rot.setRad(1.57,1, 0, 0);
+		cout << "right_sdh_finger_12_joint qIndex: " << jnt->qIndex << endl;
 		w.calc_fwdPropagateFrames();
 		w.watch(true, "Joint state set!");
 	}
+
+	w.setAgent(1);
+	cout << "joint_states_dimension: " << w.getJointStateDimension() << endl;
+	cout << "right_sdh_finger_12_joint qIndex: " << jnt->qIndex << endl;
+
 
 	ors::Shape *rgl = w.getShapeByName("left_sdh_grasp_link");
 	if(!rgl) {
