@@ -219,7 +219,7 @@ bool KomoWrapper::validateResult(const arr &traj, ors::Shape &eef, ors::Shape &t
 	cout << "EEF target pos: " << target.X.pos << endl;
 
 	// check end effector position
-	double epsilon = 0.020;
+	double epsilon = 0.010;
 	ors::Vector dist = target.X.pos - eef.X.pos;
 	cout << "Position offset: " << dist.length() << endl;
 
@@ -278,6 +278,8 @@ bool KomoWrapper::planTo(ors::KinematicWorld &world,
 	//-- parameters
 	double posPrec = MT::getParameter<double>("KOMO/moveTo/precision", 1e4); // original 1e3
 	double colPrec = MT::getParameter<double>("KOMO/moveTo/collisionPrecision", -1e0);
+	double limitMargin = MT::getParameter<double>("KOMO/moveTo/limitMargin", 0.1);
+	double limitPrec = MT::getParameter<double>("KOMO/moveTo/limitPrecision", 1e5);
 	double margin = MT::getParameter<double>("KOMO/moveTo/collisionMargin", .1);
 	double zeroVelPrec = MT::getParameter<double>("KOMO/moveTo/finalVelocityZeroPrecision", 1e1);
 	double alignPrec = MT::getParameter<double>("KOMO/moveTo/alignPrecision", 1e4); // original 1e3
@@ -286,8 +288,10 @@ bool KomoWrapper::planTo(ors::KinematicWorld &world,
 	cout << "Position precision     : " << posPrec << endl;
 	cout << "Align precision        : " << alignPrec << endl;
 	cout << "Collision margin       : " << margin << endl;
+	cout << "Limit margin           : " << limitMargin << endl;
 	cout << "Zero velocity precision: " << zeroVelPrec << endl;
 	cout << "Collision precision    : " << colPrec << endl;
+	cout << "Joint limit precision  : " << limitPrec << endl;
 	cout << "Iterations             : " << iterations << endl;
 
 	_world->calc_fwdPropagateShapeFrames();
@@ -296,26 +300,37 @@ bool KomoWrapper::planTo(ors::KinematicWorld &world,
 	target.cont=false;
 
 	MotionProblem MP(world);
-	//  MP.loadTransitionParameters(); //->move transition costs to tasks!
+
+//	MP.loadTransitionParameters(); //->move transition costs to tasks!
 	world.swift().initActivations(world);
 
 	TaskCost *c;
-	c = MP.addTask("endeff_pos", new DefaultTaskMap(posTMT, endeff.index, NoVector, target.index, NoVector));
-	c->setCostSpecs(MP.T, MP.T, {0.}, posPrec);
+	uint offset = (uint)(MP.T * 0.1);
 
-	c = MP.addTask("endeff_vel", new DefaultTaskMap(posTMT, world, endeff.name)); //endeff.index));
+	c = MP.addTask("EEF_position", new DefaultTaskMap(posTMT, endeff.index, NoVector, target.index, NoVector));
+	c->setCostSpecs(MP.T-offset, MP.T, {0.}, posPrec);
+
+	c = MP.addTask("EEF_velocity", new DefaultTaskMap(posTMT, world, endeff.name)); //endeff.index));
 	//  c = MP.addTask("q_vel", new DefaultTaskMap(qItselfTMT, world));
 	c->setCostSpecs(MP.T, MP.T, {0.}, zeroVelPrec);
 	c->map.order=1; //make this a velocity variable!
 
+	// enforce joint limits
+//	LimitsConstraint *lc = new LimitsConstraint();
+//	lc->margin = limitMargin;
+//	c = MP.addTask("Joint_limits", lc);
+
+	c = MP.addTask("Joint_limits", new DefaultTaskMap(qLimitsTMT));
+	c->setCostSpecs(0, MP.T, {0.}, limitPrec);
+
 	if(colPrec<0){ //interpreted as hard constraint
-		c = MP.addTask("collision", new CollisionConstraint(margin));
+		c = MP.addTask("Collisions", new CollisionConstraint(margin));
 	}else{ //cost term
-		c = MP.addTask("collision", new ProxyTaskMap(allPTMT, {0}, margin));
+		c = MP.addTask("Collisions", new ProxyTaskMap(allPTMT, {0}, margin));
 	}
 	c->setCostSpecs(0, MP.T, {0.}, colPrec);
 
-	c = MP.addTask("transitions", new TransitionTaskMap(world));
+	c = MP.addTask("Transitions", new TransitionTaskMap(world));
 	c->map.order=2;
 	c->setCostSpecs(0, MP.T, {0.}, 1e0);
 
@@ -323,9 +338,8 @@ bool KomoWrapper::planTo(ors::KinematicWorld &world,
 		ors::Vector axis;
 		axis.setZero();
 		axis(i)=1.;
-		c = MP.addTask(STRING("endeff_align_"<<i),
-					   new DefaultTaskMap(vecAlignTMT, endeff.index, axis, target.index, axis));
-		c->setCostSpecs(MP.T, MP.T, {1.}, alignPrec);
+		c = MP.addTask(STRING("EEF_allign_"<<i), new DefaultTaskMap(vecAlignTMT, endeff.index, axis, target.index, axis));
+		c->setCostSpecs(MP.T-offset, MP.T, {1.}, alignPrec);
 	}
 
 	//-- create the Optimization problem (of type kOrderMarkov)
@@ -336,7 +350,6 @@ bool KomoWrapper::planTo(ors::KinematicWorld &world,
 	//-- optimize
 	ors::KinematicWorld::setJointStateCount=0;
 	for(uint k=0;k<iterations;k++){
-		world.watch(false, "planning...");
 		MT::timerStart();
 		if(colPrec<0){
 			// verbose=2 shows gnuplot after optimization process
@@ -344,7 +357,7 @@ bool KomoWrapper::planTo(ors::KinematicWorld &world,
 			optConstrained(x, NoArr, Convert(MF), OPT(verbose=1, stopIters=100, maxStep=.5, stepInc=2., allowOverstep=false));
 			//verbose=2, stopIters=100, maxStep=.5, stepInc=2./*, nonStrictSteps=(!k?15:5)*/));
 		}else{
-			optNewton(x, Convert(MF), OPT(verbose=2, stopIters=100, maxStep=.5, stepInc=2., nonStrictSteps=(!k?15:5)));
+			optNewton(x, Convert(MF), OPT(verbose=1, stopIters=100, maxStep=.5, stepInc=2., nonStrictSteps=(!k?15:5)));
 		}
 		double opt_time = MT::timerRead();
 		uint set_jnt_state_cnt = ors::KinematicWorld::setJointStateCount;
@@ -371,6 +384,7 @@ bool KomoWrapper::planTo(ors::KinematicWorld &world,
 
 	world.watch(false, "Ready...");
 
+	return valid;
 }
 
 }
