@@ -1,5 +1,5 @@
-body right_arm_base_link { X=<T t(-0.4962 0.5992 0.6335) E(-2.0628 0.7628 -3.1287) > }
-
+#body right_arm_base_link { X=<T t(-0.4962 0.5992 0.6335) E(-2.0628 0.7628 -3.1287) > }
+body right_arm_base_link {  }
 body right_arm_1_link { mass=2.7082 }
 body right_arm_2_link { mass=2.7100 }
 body right_arm_3_link { mass=2.5374 }
@@ -8,6 +8,7 @@ body right_arm_5_link { mass=1.3028 }
 body right_arm_6_link { mass=1.5686 }
 body right_arm_7_link { mass=0.1943 }
 
+joint right_arm_world_joint (world_link right_arm_base_link) { type=10 A=<T t(-0.4962 0.5992 0.6335) E(-2.0628 0.7628 -3.1287) > }
 joint right_arm_0_joint (right_arm_base_link right_arm_1_link)  { A=<T t(0 0 0) d(-90 0 1 0)> B=<T t(0.11 0 0)> Q=<T d(0 1 0 0)> limits=[-2.88 2.88]  ctrl_limits=[0.191986217719 204] }
 joint right_arm_1_joint (right_arm_1_link right_arm_2_link) { A=<T t(0.2 -0.0 0) d(-90 0 0 1)> B=<T t(0 0 0) d(-90 1 0 0)> Q=<T d(0 1 0 0)> limits=[-2.0 2.0]  ctrl_limits=[0.191986217719 306] }
 joint right_arm_2_joint (right_arm_2_link right_arm_3_link) { A=<T t(0 0 0.2) d(-90 0 1 0)> B=<T t(0 0 0) d(90 0 1 0)> Q=<T d(0 1 0 0)> limits=[-2.88 2.88]  ctrl_limits=[0.226892802759 204] }

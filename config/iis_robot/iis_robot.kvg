@@ -4,3 +4,5 @@
 %include table.ors
 %include right_sdh.ors
 %include left_sdh.ors
+
+body world_link { }

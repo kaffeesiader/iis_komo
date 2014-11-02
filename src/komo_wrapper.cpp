@@ -15,7 +15,6 @@ namespace iis_komo {
 KomoWrapper::KomoWrapper(const string &config_name)
 {
 	_world = new ors::KinematicWorld(config_name.c_str());
-	CHECK(_world->getJointStateDimension() >= 14, "Wrong joint state dimension! Provided ors description is invalid!");
 	// enable collision checking for all shapes
 	for(ors::Shape *s:_world->shapes) {
 		s->cont = true;
@@ -31,10 +30,10 @@ KomoWrapper::~KomoWrapper() {
 void KomoWrapper::setState(const IISRobotState &state)
 {
 	// set the state for each single agent
-	setState(IISRobot::LeftArm, state.left_arm);
-	setState(IISRobot::RightArm, state.right_arm);
-	setState(IISRobot::LeftSDH, state.left_sdh);
-	setState(IISRobot::RightSDH, state.right_sdh);
+//	setState(IISRobot::LeftArm, state.left_arm);
+//	setState(IISRobot::RightArm, state.right_arm);
+//	setState(IISRobot::LeftSDH, state.left_sdh);
+//	setState(IISRobot::RightSDH, state.right_sdh);
 }
 
 void KomoWrapper::setState(IISRobot::PlanninGroup group, const double values[])
@@ -44,13 +43,13 @@ void KomoWrapper::setState(IISRobot::PlanninGroup group, const double values[])
 	uint jsDim = _world->getJointStateDimension();
 	// get the joint names of specified agent...
 	MT::Array<const char*> names = IISRobot::get_jointnames_from_group(group);
-	CHECK(names.d0 != jsDim, "Unable to set joint states - wrong number of joints");
+	CHECK(names.N == jsDim, "Unable to set joint states - wrong number of joints");
 	arr state(jsDim);
 	// ... and set each joint to desired position.
 	for (int i = 0; i < jsDim; ++i) {
 		const char *name = names(i);
 		ors::Joint *jnt = _world->getJointByName(name);
-		CHECK(!jnt, "Unable to set joint position - joint '" << name << "' not found in model!");
+		CHECK(jnt, "Unable to set joint position - joint '" << name << "' not found in model!");
 		state(jnt->qIndex) = values[i];
 	}
 
@@ -79,7 +78,6 @@ void KomoWrapper::display(bool block, const char *msg)
 void KomoWrapper::addShape()
 {
 	ors::Body *b = new ors::Body(*_world);
-
 	ors::Shape *s = new ors::Shape(*_world, *b, NULL, false);
 
 	s->type = ors::ShapeType::boxST;
@@ -254,6 +252,11 @@ bool KomoWrapper::planTo(ors::KinematicWorld &world,
 
 	// switch to selected planning group
 	_world->setAgent(agent);
+	// ensure that the specified end effector is part of selected planning group
+	if(!_world->getShapesByAgent(agent).contains(&endeff)) {
+		cerr << "The end effector '" << endeff.name << "' is not part of selected planning group." << endl;
+		return false;
+	}
 
 	_world->calc_fwdPropagateShapeFrames();
 	display(false, "planning...");
@@ -261,26 +264,31 @@ bool KomoWrapper::planTo(ors::KinematicWorld &world,
 	target.cont=false;
 
 	MotionProblem MP(world);
-	//  MP.loadTransitionParameters(); //->move transition costs to tasks!
+//	MP.loadTransitionParameters(); //->move transition costs to tasks!
 	world.swift().initActivations(world);
+//	arr W(world.getJointStateDimension());
+//	for (int i = 0; i < world.getJointStateDimension(); ++i) {
+//		W(i) = 1.0;
+//	}
+//	MP.H_rate_diag = W;
 
 	TaskCost *c;
-	c = MP.addTask("endeff_pos", new DefaultTaskMap(posTMT, endeff.index, NoVector, target.index, NoVector));
+	c = MP.addTask("End effector pos", new DefaultTaskMap(posTMT, endeff.index, NoVector, target.index, NoVector));
 	c->setCostSpecs(MP.T, MP.T, {0.}, posPrec);
 
-	c = MP.addTask("endeff_vel", new DefaultTaskMap(posTMT, world, endeff.name)); //endeff.index));
+	c = MP.addTask("End effector vel", new DefaultTaskMap(posTMT, world, endeff.name)); //endeff.index));
 	//  c = MP.addTask("q_vel", new DefaultTaskMap(qItselfTMT, world));
 	c->setCostSpecs(MP.T, MP.T, {0.}, zeroVelPrec);
 	c->map.order=1; //make this a velocity variable!
 
 	if(colPrec<0){ //interpreted as hard constraint
-		c = MP.addTask("collision", new CollisionConstraint(margin));
+		c = MP.addTask("Collision const.", new CollisionConstraint(margin));
 	}else{ //cost term
-		c = MP.addTask("collision", new ProxyTaskMap(allPTMT, {0}, margin));
+		c = MP.addTask("Collision cost", new ProxyTaskMap(allPTMT, {0}, margin));
 	}
 	c->setCostSpecs(0, MP.T, {0.}, colPrec);
 
-	c = MP.addTask("transitions", new TransitionTaskMap(world));
+	c = MP.addTask("Transition costs", new TransitionTaskMap(world));
 	c->map.order=2;
 	c->setCostSpecs(0, MP.T, {0.}, 1e0);
 
@@ -288,7 +296,7 @@ bool KomoWrapper::planTo(ors::KinematicWorld &world,
 		ors::Vector axis;
 		axis.setZero();
 		axis(i)=1.;
-		c = MP.addTask(STRING("endeff_align_"<<i),
+		c = MP.addTask(STRING("End effector orient"<<i),
 					   new DefaultTaskMap(vecAlignTMT, endeff.index, axis, target.index, axis));
 		c->setCostSpecs(MP.T, MP.T, {1.}, alignPrec);
 	}
@@ -301,7 +309,6 @@ bool KomoWrapper::planTo(ors::KinematicWorld &world,
 	//-- optimize
 	ors::KinematicWorld::setJointStateCount=0;
 	for(uint k=0;k<iterations;k++){
-		world.watch(false, "planning...");
 		MT::timerStart();
 		if(colPrec<0){
 			// verbose=2 shows gnuplot after optimization process
