@@ -4,7 +4,7 @@
 #include <ros/ros.h>
 
 #include <sensor_msgs/JointState.h>
-#include <iis_robot_state.h>
+#include <iis_robot.h>
 
 using namespace std;
 using namespace ros;
@@ -20,7 +20,7 @@ public:
 	~RobotInterface() {}
 
 	IISRobotState getState();
-	void execute(const vector<IISRobotState> &path);
+	void execute(IISRobot::PlanninGroup group, const IISRobot::Path &path);
 
 private:
 

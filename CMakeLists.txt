@@ -80,7 +80,7 @@ set_target_properties(robot_interface PROPERTIES COMPILE_FLAGS -std=c++0x)
 
 ## Declare a cpp executable
 add_executable(iis_komo src/iis_komo.cpp)
-add_dependencies(iis_komo komo_wrapper robot_interface)
+add_dependencies(iis_komo komo_wrapper robot_interface iis_komo_generate_messages_cpp)
 target_link_libraries(iis_komo komo_wrapper robot_interface ${catkin_LIBRARIES})
 set_target_properties(iis_komo PROPERTIES COMPILE_FLAGS -std=c++0x)
 

@@ -1,6 +1,9 @@
 #
 # Plans a path, using the KOMO motion planner
 
+# the name of the planning group (either 'left_arm' or 'right_arm')
+string planning_group
+
 # the name of the end effector link
 string eef_link
 

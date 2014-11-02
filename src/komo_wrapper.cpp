@@ -7,6 +7,7 @@
 #include <komo_wrapper.h>
 #include <utils.h>
 
+
 using namespace std;
 
 namespace iis_komo {
@@ -19,7 +20,6 @@ KomoWrapper::KomoWrapper(const string &config_name)
 	for(ors::Shape *s:_world->shapes) {
 		s->cont = true;
 	}
-
 }
 
 KomoWrapper::~KomoWrapper() {
@@ -28,185 +28,76 @@ KomoWrapper::~KomoWrapper() {
     }
 }
 
-int KomoWrapper::getWorldJointIndex(const string &arm, int idx)
-{
-	char name[20];
-	sprintf(name, "%s_arm_%d_joint", arm.c_str(), idx);
-	ors::Joint *jnt = _world->getJointByName(name);
-	if(jnt) {
-		return jnt->index;
-	} else {
-		return -1;
-	}
-}
-
 void KomoWrapper::setState(const IISRobotState &state)
 {
-	arr new_state(_world->getJointStateDimension());
-	// set the joint positions of the two arms
-	for(int i = 0; i < 7; ++i) {
-		int left_idx = getWorldJointIndex("left", i);
-		int right_idx = getWorldJointIndex("right", i);
-
-		new_state(left_idx) = state.left_arm[i];
-		new_state(right_idx) = state.right_arm[i];
-	}
-
-	_world->setJointState(new_state);
-
-	// set the states of the grippers
-	// this has to be done in a different way because gripper joints are fixed...
-	setGripperState("left", state.left_sdh);
-	setGripperState("right", state.right_sdh);
-
-	_world->calc_fwdPropagateFrames();
+	// set the state for each single agent
+	setState(IISRobot::LeftArm, state.left_arm);
+	setState(IISRobot::RightArm, state.right_arm);
+	setState(IISRobot::LeftSDH, state.left_sdh);
+	setState(IISRobot::RightSDH, state.right_sdh);
 }
 
-void KomoWrapper::setGripperState(const string &arm, const double *state)
+void KomoWrapper::setState(IISRobot::PlanninGroup group, const double values[])
 {
-	setGripperJointPos(arm + "_sdh_knuckle_joint", state[0]);
-	setGripperJointPos(arm + "_sdh_finger_12_joint", state[1]);
-	setGripperJointPos(arm + "_sdh_finger_13_joint", state[2]);
-	setGripperJointPos(arm + "_sdh_thumb_2_joint", state[3]);
-	setGripperJointPos(arm + "_sdh_thumb_3_joint", state[4]);
-	setGripperJointPos(arm + "_sdh_finger_22_joint", state[5]);
-	setGripperJointPos(arm + "_sdh_finger_23_joint", state[6]);
-	// set state of mirrored joint
-	setGripperJointPos(arm + "_sdh_finger_21_joint", -state[0]);
+	// switch to selected agent...
+	_world->setAgent(group);
+	uint jsDim = _world->getJointStateDimension();
+	// get the joint names of specified agent...
+	MT::Array<const char*> names = IISRobot::get_jointnames_from_group(group);
+	CHECK(names.d0 != jsDim, "Unable to set joint states - wrong number of joints");
+	arr state(jsDim);
+	// ... and set each joint to desired position.
+	for (int i = 0; i < jsDim; ++i) {
+		const char *name = names(i);
+		ors::Joint *jnt = _world->getJointByName(name);
+		CHECK(!jnt, "Unable to set joint position - joint '" << name << "' not found in model!");
+		state(jnt->qIndex) = values[i];
+	}
+
+	_world->setJointState(state);
 }
 
-void KomoWrapper::setGripperJointPos(const string &joint, double pos)
+void KomoWrapper::arrToPath(const arr &traj, IISRobot::Path &path)
 {
-	ors::Joint *jnt = _world->getJointByName(joint.c_str());
-
-	if(!jnt) {
-		cerr << "Unable to set gripper joint position - no joint with name '" << joint << "' found in model!";
-	} else {
-		jnt->Q.rot.setRad(pos, 1, 0, 0);
-	}
-}
-
-void KomoWrapper::arrToPath(const arr &traj, std::vector<IISRobotState> &path)
-{
-	// traverse through all trajectory points
-	for (int i = 0; i < traj.d0; ++i) {
-		arr pt = traj[i];
-		IISRobotState state;
-		// extract the joint positions for each arm
-		for (int j = 0; j < 7; ++j) {
-			state.left_arm[j] = pt(getWorldJointIndex("left", j));
-			state.right_arm[j] = pt(getWorldJointIndex("right", j));
-		}
-		// add extracted state to path
-		path.push_back(state);
-	}
-}
-
-bool KomoWrapper::plan(const string &eef, double x, double y, double z, const IISRobotState &start_state, vector<IISRobotState> &path)
-{
-	// set initial position
-	setState(start_state);
-
-	// set target position
-	ors::Shape *target = _world->getShapeByName("target");
-	if(!target) {
-		cerr << "Unable to find shape with name '" << "target" << "'" << endl;
-		return false;
-	}
-
-	ors::Vector targetPos(x, y, z);
-	target->rel.pos = targetPos;
-
-	ors::Shape *endeff = _world->getShapeByName(eef.c_str());
-	if(!endeff) {
-		cerr << "Unable to find shape with name '" << eef << "'" << endl;
-		return false;
-	}
-
-	// make planning request, using only position constraints.
-	arr traj;
-	bool success = planTo(*_world, *endeff, *target, traj);
-	if(success) {
-		arrToPath(traj, path);
-	}
-	return success;
-}
-
-bool KomoWrapper::plan(const string &eef, double x, double y, double z, double roll, double pitch, double yaw, const IISRobotState &start_state, vector<IISRobotState> &path)
-{
-	// set initial position
-	setState(start_state);
-
-	ors::Shape *target = _world->getShapeByName("target");
-	if(!target) {
-		cerr << "Unable to find shape with name '" << "target" << "'" << endl;
-		return false;
-	}
-
-	// set target position...
-	ors::Vector target_pos(x, y, z);
-	target->rel.pos = target_pos;
-
-	// ...and orientation
-	ors::Quaternion q;
-	q.setRpy(roll, pitch, yaw);
-
-	target->rel.rot = q;
-
-	ors::Shape *endeff = _world->getShapeByName(eef.c_str());
-	if(!endeff) {
-		cerr << "Unable to find shape with name '" << eef << "'" << endl;
-		return false;
-	}
-
-	// make planning request and align all axes
-	arr traj;
-	bool success = planTo(*_world, *endeff, *target, traj, 7);
-	if(success) {
-		arrToPath(traj, path);
-	}
-	return success;
-}
-
-bool KomoWrapper::plan(const string &eef, double x, double y, double z, double qx, double qy, double qz, double qw, const IISRobotState &start_state, vector<IISRobotState> &path)
-{
-	// set initial position
-	setState(start_state);
-
-	ors::Shape *target = _world->getShapeByName("target");
-	if(!target) {
-		cerr << "Unable to find shape with name '" << "target" << "'" << endl;
-		return false;
-	}
-
-	// set target position...
-	ors::Vector target_pos(x, y, z);
-	target->rel.pos = target_pos;
-
-	// ...and orientation
-	ors::Quaternion q;
-	q.set(qw, qx, qy, qz);
-
-	target->rel.rot = q;
-
-	ors::Shape *endeff = _world->getShapeByName(eef.c_str());
-	if(!endeff) {
-		cerr << "Unable to find shape with name '" << eef << "'" << endl;
-		return false;
-	}
-
-	// make planning request and align all axes
-	arr traj;
-	bool success = planTo(*_world, *endeff, *target, traj, 7);
-	if(success) {
-		arrToPath(traj, path);
-	}
-	return success;
+//	// traverse through all trajectory points
+//	for (int i = 0; i < traj.d0; ++i) {
+//		arr pt = traj[i];
+//		IISRobot::ArmState state;
+//		for (int j = 0; j < 7; ++j) {
+//			state[j] = pt(j);
+//		}
+//		// add extracted state to path
+//		path.push_back(state);
+//	}
 }
 
 void KomoWrapper::display(bool block, const char *msg)
 {
 	_world->watch(block, msg);
+}
+
+void KomoWrapper::addShape()
+{
+	ors::Body *b = new ors::Body(*_world);
+
+	ors::Shape *s = new ors::Shape(*_world, *b, NULL, false);
+
+	s->type = ors::ShapeType::boxST;
+	s->size[0] = 0.1;
+	s->size[1] = 0.1;
+	s->size[2] = 0.1;
+
+	s->color[0] = 10.0;
+
+	b->X.pos.x = 1.0;
+	b->X.pos.y = 1.0;
+	b->X.pos.z = 0.14;
+
+//	ors::Shape *o = _world->getShapeByName("obstacle1");
+//	printf("R: %.2f G: %.2f  B: %.2f\n", o->color[0], o->color[1], o->color[2]);
+
+	_collision_objects.push_back(b);
+	_world->calc_fwdPropagateFrames();
 }
 
 bool KomoWrapper::validateResult(const arr &traj, ors::Shape &eef, ors::Shape &target, bool position_only)
@@ -247,18 +138,8 @@ bool KomoWrapper::validateResult(const arr &traj, ors::Shape &eef, ors::Shape &t
 		arr pt = traj[i];
 		// validate joint limits
 		for (int j = 0; j < 7; ++j) {
-			int left_index = getWorldJointIndex("left", j);
-			int right_index = getWorldJointIndex("right", j);
-			double left_pos = pt(left_index);
-			double right_pos = pt(right_index);
-			double limit = limits[j];
-
-			if(left_pos > limit || left_pos < -limit) {
-				cerr << "Joint limit violated for joint " << j << " in left arm! Value: " << left_pos << endl;
-				return false;
-			}
-			if(right_pos > limit || right_pos < -limit) {
-				cerr << "Joint limit violated for joint " << j << " in right arm! Value: " << right_pos << endl;
+			if(pt(j) > limits[j] || pt(j) < -limits[j]) {
+				cerr << "Joint limit violated for joint " << j << "! Value: " << pt(j) << endl;
 				return false;
 			}
 		}
@@ -268,12 +149,93 @@ bool KomoWrapper::validateResult(const arr &traj, ors::Shape &eef, ors::Shape &t
 	return true;
 }
 
+/* ---------------------------- planning related ----------------------------------*/
+
+bool KomoWrapper::plan(const string &eef, const IISRobot::PlanninGroup group, double x, double y, double z, IISRobot::Path &path)
+{
+	// set target position
+	ors::Shape *target = _world->getShapeByName("target");
+	if(!target) {
+		cerr << "Unable to find shape with name '" << "target" << "'" << endl;
+		return false;
+	}
+
+	ors::Vector targetPos(x, y, z);
+	target->rel.pos = targetPos;
+
+	ors::Shape *endeff = _world->getShapeByName(eef.c_str());
+	if(!endeff) {
+		cerr << "Unable to find shape with name '" << eef << "'" << endl;
+		return false;
+	}
+
+	// make planning request, using only position constraints.
+	return planTo(*_world, *endeff, *target, (uint)group, path);
+}
+
+bool KomoWrapper::plan(const string &eef, const IISRobot::PlanninGroup group, double x, double y, double z, double roll, double pitch, double yaw, IISRobot::Path &path)
+{
+	ors::Shape *target = _world->getShapeByName("target");
+	if(!target) {
+		cerr << "Unable to find shape with name '" << "target" << "'" << endl;
+		return false;
+	}
+
+	// set target position...
+	ors::Vector target_pos(x, y, z);
+	target->rel.pos = target_pos;
+
+	// ...and orientation
+	ors::Quaternion q;
+	q.setRpy(roll, pitch, yaw);
+
+	target->rel.rot = q;
+
+	ors::Shape *endeff = _world->getShapeByName(eef.c_str());
+	if(!endeff) {
+		cerr << "Unable to find shape with name '" << eef << "'" << endl;
+		return false;
+	}
+
+	// make planning request and align all axes
+	return planTo(*_world, *endeff, *target, (uint)group, path, 7);
+}
+
+bool KomoWrapper::plan(const string &eef, const IISRobot::PlanninGroup group, double x, double y, double z, double qx, double qy, double qz, double qw, IISRobot::Path &path)
+{
+	ors::Shape *target = _world->getShapeByName("target");
+	if(!target) {
+		cerr << "Unable to find shape with name '" << "target" << "'" << endl;
+		return false;
+	}
+
+	// set target position...
+	ors::Vector target_pos(x, y, z);
+	target->rel.pos = target_pos;
+
+	// ...and orientation
+	ors::Quaternion q;
+	q.set(qw, qx, qy, qz);
+
+	target->rel.rot = q;
+
+	ors::Shape *endeff = _world->getShapeByName(eef.c_str());
+	if(!endeff) {
+		cerr << "Unable to find shape with name '" << eef << "'" << endl;
+		return false;
+	}
+
+	// make planning request and align all axes
+	return planTo(*_world, *endeff, *target, (uint)group, path, 7);
+}
+
 bool KomoWrapper::planTo(ors::KinematicWorld &world,
-                           ors::Shape &endeff,
-                           ors::Shape &target,
-                           arr &traj,
-                           byte whichAxesToAlign,
-                           uint iterate)
+						   ors::Shape &endeff,
+						   ors::Shape &target,
+						   uint agent,
+						   arr &traj,
+						   byte whichAxesToAlign,
+						   uint iterate)
 {
 	//-- parameters
 	double posPrec = MT::getParameter<double>("KOMO/moveTo/precision", 1e4); // original 1e3
@@ -289,6 +251,9 @@ bool KomoWrapper::planTo(ors::KinematicWorld &world,
 	cout << "Zero velocity precision: " << zeroVelPrec << endl;
 	cout << "Collision precision    : " << colPrec << endl;
 	cout << "Iterations             : " << iterations << endl;
+
+	// switch to selected planning group
+	_world->setAgent(agent);
 
 	_world->calc_fwdPropagateShapeFrames();
 	display(false, "planning...");

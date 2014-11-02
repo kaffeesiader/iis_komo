@@ -23,54 +23,51 @@ IISRobotState RobotInterface::getState()
 	return _current_state;
 }
 
-void RobotInterface::execute(const vector<IISRobotState> &path)
+void RobotInterface::execute(IISRobot::PlanninGroup group, const IISRobot::Path &path)
 {
-	std_msgs::Float64MultiArray msg_left;
-	msg_left.layout.dim.resize(1);
-	msg_left.layout.dim[0].size = 7;
-	msg_left.data.resize(7);
+	Publisher *pub = NULL;
+	switch (group) {
+	case IISRobot::LeftArm:
+		pub = &_pub_left_arm_move;
+		break;
+	case IISRobot::RightArm:
+		pub = &_pub_right_arm_move;
+		break;
+	default:
+		ROS_ERROR("Hand trajectory execution is not implemented yet!");
+		return;
+	}
 
-	std_msgs::Float64MultiArray msg_right;
-	msg_right.layout.dim.resize(1);
-	msg_right.layout.dim[0].size = 7;
-	msg_right.data.resize(7);
+	std_msgs::Float64MultiArray msg;
+	msg.layout.dim.resize(1);
+	msg.layout.dim[0].size = 7;
+	msg.data.resize(7);
 
 	ros::Rate r(100);
 
 	// iterate over trajectory points...
-	for (int i = 1; i < path.size(); ++i) {
+	for (int i = 1; i < path.d0; ++i) {
 
-		const IISRobotState &current_wp = path[i-1];
-		const IISRobotState &next_wp = path[i];
-
-		arr c_state_left(&current_wp.left_arm[0], 7);
-		arr n_state_left(&next_wp.left_arm[0], 7);
-		arr diff_left = n_state_left - c_state_left;
-
-		arr c_state_right(&current_wp.right_arm[0], 7);
-		arr n_state_right(&next_wp.right_arm[0], 7);
-		arr diff_right = n_state_right - c_state_right;
+		arr current_wp = path[i-1];
+		arr next_wp = path[i];
+		arr diff = next_wp - current_wp;
 
 		// how many interpolation steps ?
-		double steps = 12;
+		double steps = 10;
 
 		// ... calculate interpolation step based on loop rate ...
-		arr step_left = diff_left / steps;
-		arr step_right = diff_right / steps;
+		arr step = diff / steps;
 
 		// ... and move subsequently towards next position.
 		for (int j = 0; j < steps; ++j) {
 
 			for(int k = 0; k < 7; ++k) {
-				msg_left.data[k] = c_state_left(k);
-				msg_right.data[k] = c_state_right(k);
+				msg.data[k] = current_wp(k);
 			}
 
-			_pub_left_arm_move.publish(msg_left);
-			_pub_right_arm_move.publish(msg_right);
+			pub->publish(msg);
 
-			c_state_left += step_left;
-			c_state_right += step_right;
+			current_wp += step;
 
 			r.sleep();
 		}

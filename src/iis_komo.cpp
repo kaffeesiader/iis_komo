@@ -36,40 +36,59 @@ private:
 		string eef = request.eef_link;
 		size_t sz = request.target.size();
 
-		ROS_INFO("Received planning request for link '%s'", eef.c_str());
+		ROS_INFO("Received planning request for link '%s' in planning group '%s'", eef.c_str(), request.planning_group.c_str());
 
-		vector<IISRobotState> path;
+		IISRobot::Path path;
 		IISRobotState state = _robot->getState();
+		// set the start state to current robot state
+		_komo->setState(state);
+
+		IISRobot::PlanninGroup group;
+
+		if(request.planning_group == "left_arm") {
+			group = IISRobot::PlanninGroup::LeftArm;
+		} else if(request.planning_group == "right_arm") {
+			group = IISRobot::PlanninGroup::RightArm;
+		} else {
+			ROS_ERROR("Unknown planning group!");
+			response.result = false;
+			return true;
+		}
+
+		bool success = false;
 
 		switch (sz) {
 		case 3:
 			// position only
 			ROS_INFO("Specifying position only goal constraint.");
-			_komo->plan(
+			success =_komo->plan(
 						eef,
+						group,
 						request.target[0],
 						request.target[1],
 						request.target[2],
-						state,
 						path);
 			break;
 		case 6:
 			// position and orientation based on roll, pitch, yaw
 			ROS_INFO("Specifying position and orientation goal constraint (rpy).");
-			_komo->plan(
+			success = _komo->plan(
 						eef,
+						group,
 						request.target[0],
 						request.target[1],
 						request.target[2],
 						request.target[3],
 						request.target[4],
-						request.target[5], state, path);
+						request.target[5],
+						path);
 			break;
 		case 7:
 			// position and orientation based on quaternion
 			ROS_INFO("Specifying position and orientation goal constraint (quat).");
-			_komo->plan(
+			success = _komo->plan(
 						eef,
+						group,
 						request.target[0],
 						request.target[1],
 						request.target[2],
@@ -77,7 +96,6 @@ private:
 						request.target[4],
 						request.target[5],
 						request.target[6],
-						state,
 						path);
 			break;
 		default:
@@ -85,7 +103,7 @@ private:
 			return true;
 		}
 
-		if(path.size() == 0) {
+		if(!success) {
 			ROS_WARN("Planning failed!");
 			response.result = false;
 
@@ -96,7 +114,7 @@ private:
 
 		if(!request.plan_only) {
 			ROS_INFO("Executing trajectory...");
-			_robot->execute(path);
+			_robot->execute(group, path);
 			ROS_INFO("Trajectory execution complete.");
 		}
 
