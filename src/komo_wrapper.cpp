@@ -11,15 +11,16 @@ using namespace std;
 
 namespace iis_komo {
 
+
 KomoWrapper::KomoWrapper(const string &config_name)
 {
+	CHECK(!config_name.empty(), "Unable to create KinematicWorld - parameter 'config_name' cannot be empty!");
 	_world = new ors::KinematicWorld(config_name.c_str());
 	CHECK(_world->getJointStateDimension() >= 14, "Wrong joint state dimension! Provided ors description is invalid!");
 	// enable collision checking for all shapes
 	for(ors::Shape *s:_world->shapes) {
 		s->cont = true;
 	}
-
 }
 
 KomoWrapper::~KomoWrapper() {
@@ -340,6 +341,9 @@ bool KomoWrapper::planTo(ors::KinematicWorld &world,
 		axis(i)=1.;
 		c = MP.addTask(STRING("EEF_allign_"<<i), new DefaultTaskMap(vecAlignTMT, endeff.index, axis, target.index, axis));
 		c->setCostSpecs(MP.T-offset, MP.T, {1.}, alignPrec);
+		arr test;
+		c->map.phi(test, NoArr, world);
+		cout << "Test" << i << ": " << test << endl;
 	}
 
 	//-- create the Optimization problem (of type kOrderMarkov)

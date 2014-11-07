@@ -1,6 +1,0 @@
-#body torso_link { X=<T t(-0.4723 0.6767 -0.734)> }
-body torso_link { X=<T t(-0.5112 0.6767 0.0226)> }
-
-
-#shape torso1(torso_link) {contact, type=3, rel=<T t(0 0 0) d(0 1 0 0)>, mesh='meshes/torso.stl' color=[.9 .9 .9] }
-shape torso(torso_link) {contact, type=3, rel=<T t(0 0 0) d(0 1 0 0)>, mesh='meshes/torso_upper.stl' color=[.9 .9 .9] }

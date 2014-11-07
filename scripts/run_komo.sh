@@ -11,7 +11,8 @@ fi
 echo "Launching iis_komo for namespace '$N'"
 
 # iis_komo only works when working directory is correctly set
-cd `rospack find iis_komo`/config
+# this directory needs to contain MT.cfg (file or symlink)
+cd `rospack find iis_komo`/tmp
 # set namespace
 export ROS_NAMESPACE=$N
 # start iis_komo node

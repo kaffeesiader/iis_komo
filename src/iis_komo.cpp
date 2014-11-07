@@ -5,6 +5,8 @@
 #include <robot_interface.h>
 #include <komo_wrapper.h>
 
+#define MODEL_FILE_NAME "../data/iis_robot.kvg"
+
 using namespace ros;
 using namespace std;
 
@@ -120,7 +122,7 @@ int main(int argc, char *argv[])
 
 	ROS_INFO("Starting IIS_KOMO node in namespace '%s'...", nh.getNamespace().c_str());
 
-	iis_komo::KomoWrapper wrapper("iis_robot.kvg");
+	iis_komo::KomoWrapper wrapper(MODEL_FILE_NAME);
 	iis_komo::RobotInterface robot(nh);
 	iis_komo::KomoInterface ki(nh, &wrapper, &robot);
 
