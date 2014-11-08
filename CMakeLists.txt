@@ -8,7 +8,9 @@ set(CMAKE_BUILD_TYPE Debug)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
   message_generation
+  trajectory_msgs
   roscpp
+  actionlib
 )
 
 ## Generate messages in the 'msg' folder
@@ -33,6 +35,7 @@ add_service_files(
 ## Generate added messages and services with any dependencies listed here
 generate_messages(
    DEPENDENCIES
+   trajectory_msgs
 )
 
 
@@ -78,10 +81,14 @@ add_library(robot_interface src/robot_interface.cpp)
 target_link_libraries(robot_interface ${catkin_LIBRARIES})
 set_target_properties(robot_interface PROPERTIES COMPILE_FLAGS -std=c++0x)
 
+add_library(time_parameterization src/time_parameterization.cpp)
+target_link_libraries(time_parameterization Core ${catkin_LIBRARIES})
+set_target_properties(time_parameterization PROPERTIES COMPILE_FLAGS -std=c++0x)
+
 ## Declare a cpp executable
 add_executable(iis_komo src/iis_komo.cpp)
-add_dependencies(iis_komo komo_wrapper robot_interface)
-target_link_libraries(iis_komo komo_wrapper robot_interface ${catkin_LIBRARIES})
+add_dependencies(iis_komo komo_wrapper robot_interface iis_komo_generate_messages_cpp)
+target_link_libraries(iis_komo komo_wrapper robot_interface time_parameterization ${catkin_LIBRARIES})
 set_target_properties(iis_komo PROPERTIES COMPILE_FLAGS -std=c++0x)
 
 add_executable(komo_test src/test.cpp)
@@ -89,6 +96,7 @@ target_link_libraries(komo_test Core ${catkin_LIBRARIES})
 set_target_properties(komo_test PROPERTIES COMPILE_FLAGS -std=c++0x)
 
 add_executable(komo_info src/info.cpp)
+add_dependencies(komo_info iis_komo_generate_messages_cpp)
 target_link_libraries(komo_info Ors Core Motion ${catkin_LIBRARIES})
 set_target_properties(komo_info PROPERTIES COMPILE_FLAGS -std=c++0x)
 

@@ -4,6 +4,8 @@
 #include <iis_komo/Move.h>
 #include <robot_interface.h>
 #include <komo_wrapper.h>
+#include <time_parameterization.h>
+#include <utils.h>
 
 #define MODEL_FILE_NAME "../data/iis_robot.kvg"
 
@@ -33,21 +35,34 @@ private:
 	RobotInterface *_robot;
 
 	ServiceServer _move_srv;
+	TimeParameterization _time_param;
 
 	bool callbackMove(iis_komo::Move::Request &request, iis_komo::Move::Response &response) {
 		string eef = request.eef_link;
 		size_t sz = request.target.size();
 
-		ROS_INFO("Received planning request for link '%s'", eef.c_str());
+		ROS_INFO("Received planning request for link '%s' on planning group '%s'", eef.c_str(), request.planning_group.c_str());
+		IISRobot::PlanninGroup group;
 
-		vector<IISRobotState> path;
+		if(request.planning_group == "left_arm") {
+			group = IISRobot::LeftArm;
+		} else if(request.planning_group == "right_arm") {
+			group = IISRobot::RightArm;
+		} else {
+			ROS_ERROR("Unknown planning group '%s'.", request.planning_group.c_str());
+			response.result = false;
+			return true;
+		}
+
+		bool success;
+		IISRobot::Path path;
 		IISRobotState state = _robot->getState();
 
 		switch (sz) {
 		case 3:
 			// position only
 			ROS_INFO("Specifying position only goal constraint.");
-			_komo->plan(
+			success = _komo->plan(
 						eef,
 						request.target[0],
 						request.target[1],
@@ -58,7 +73,7 @@ private:
 		case 6:
 			// position and orientation based on roll, pitch, yaw
 			ROS_INFO("Specifying position and orientation goal constraint (rpy).");
-			_komo->plan(
+			success = _komo->plan(
 						eef,
 						request.target[0],
 						request.target[1],
@@ -70,7 +85,7 @@ private:
 		case 7:
 			// position and orientation based on quaternion
 			ROS_INFO("Specifying position and orientation goal constraint (quat).");
-			_komo->plan(
+			success = _komo->plan(
 						eef,
 						request.target[0],
 						request.target[1],
@@ -87,7 +102,7 @@ private:
 			return true;
 		}
 
-		if(path.size() == 0) {
+		if(!success) {
 			ROS_WARN("Planning failed!");
 			response.result = false;
 
@@ -96,13 +111,21 @@ private:
 
 		ROS_INFO("Planning successful!");
 
+		komo_path_to_joint_traj(group, path, response.trajectory);
+		_time_param.computeTimeStamps(response.trajectory);
+
+
 		if(!request.plan_only) {
 			ROS_INFO("Executing trajectory...");
-			_robot->execute(path);
-			ROS_INFO("Trajectory execution complete.");
+			success = _robot->execute(group, response.trajectory);
+			if(success) {
+				ROS_INFO("Trajectory execution complete.");
+			} else {
+				ROS_ERROR("Trajectory execution failed.");
+			}
 		}
 
-		response.result = true;
+		response.result = success;
 		ROS_INFO("Planning request completed!");
 
 		return true;

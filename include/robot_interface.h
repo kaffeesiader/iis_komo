@@ -1,10 +1,14 @@
 #ifndef ROBOT_INTERFACE_H
 #define ROBOT_INTERFACE_H
 
-#include <ros/ros.h>
+#include <boost/shared_ptr.hpp>
 
+#include <ros/ros.h>
+#include <actionlib/client/simple_action_client.h>
 #include <sensor_msgs/JointState.h>
-#include <iis_robot_state.h>
+#include <control_msgs/FollowJointTrajectoryAction.h>
+
+#include <iis_robot.h>
 
 using namespace std;
 using namespace ros;
@@ -14,13 +18,17 @@ namespace iis_komo {
 
 class RobotInterface {
 
+	typedef boost::shared_ptr<actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction>> ControllerClientPtr;
+
 public:
 
 	RobotInterface(NodeHandle &nh);
 	~RobotInterface() {}
 
 	IISRobotState getState();
-	void execute(const vector<IISRobotState> &path);
+	void execute(IISRobot::PlanninGroup group, const IISRobot::Path &path);
+	bool execute(IISRobot::PlanninGroup group, trajectory_msgs::JointTrajectory &trajectory);
+
 
 private:
 
@@ -33,6 +41,9 @@ private:
 	Subscriber _sub_right_sdh_state;
 
 	IISRobotState _current_state;
+
+	ControllerClientPtr _left_arm_client;
+	ControllerClientPtr _right_arm_client;
 
 	void CBLeftArmState(const sensor_msgs::JointStatePtr &msg);
 	void CBRightArmState(const sensor_msgs::JointStatePtr &msg);

@@ -103,7 +103,7 @@ void KomoWrapper::arrToPath(const arr &traj, std::vector<IISRobotState> &path)
 	}
 }
 
-bool KomoWrapper::plan(const string &eef, double x, double y, double z, const IISRobotState &start_state, vector<IISRobotState> &path)
+bool KomoWrapper::plan(const string &eef, double x, double y, double z, const IISRobotState &start_state, IISRobot::Path &path)
 {
 	// set initial position
 	setState(start_state);
@@ -125,15 +125,10 @@ bool KomoWrapper::plan(const string &eef, double x, double y, double z, const II
 	}
 
 	// make planning request, using only position constraints.
-	arr traj;
-	bool success = planTo(*_world, *endeff, *target, traj);
-	if(success) {
-		arrToPath(traj, path);
-	}
-	return success;
+	return planTo(*_world, *endeff, *target, path);
 }
 
-bool KomoWrapper::plan(const string &eef, double x, double y, double z, double roll, double pitch, double yaw, const IISRobotState &start_state, vector<IISRobotState> &path)
+bool KomoWrapper::plan(const string &eef, double x, double y, double z, double roll, double pitch, double yaw, const IISRobotState &start_state, IISRobot::Path &path)
 {
 	// set initial position
 	setState(start_state);
@@ -161,15 +156,10 @@ bool KomoWrapper::plan(const string &eef, double x, double y, double z, double r
 	}
 
 	// make planning request and align all axes
-	arr traj;
-	bool success = planTo(*_world, *endeff, *target, traj, 7);
-	if(success) {
-		arrToPath(traj, path);
-	}
-	return success;
+	return planTo(*_world, *endeff, *target, path, 7);
 }
 
-bool KomoWrapper::plan(const string &eef, double x, double y, double z, double qx, double qy, double qz, double qw, const IISRobotState &start_state, vector<IISRobotState> &path)
+bool KomoWrapper::plan(const string &eef, double x, double y, double z, double qx, double qy, double qz, double qw, const IISRobotState &start_state, IISRobot::Path &path)
 {
 	// set initial position
 	setState(start_state);
@@ -197,12 +187,7 @@ bool KomoWrapper::plan(const string &eef, double x, double y, double z, double q
 	}
 
 	// make planning request and align all axes
-	arr traj;
-	bool success = planTo(*_world, *endeff, *target, traj, 7);
-	if(success) {
-		arrToPath(traj, path);
-	}
-	return success;
+	return planTo(*_world, *endeff, *target, path, 7);
 }
 
 void KomoWrapper::display(bool block, const char *msg)

@@ -28,6 +28,7 @@ int main(int argc, char *argv[])
 
 	// define the service request
 	iis_komo::MoveRequest request;
+	request.planning_group = "right_arm";
 	request.eef_link = "right_sdh_tip_link";
 	request.plan_only = false;
 	// specify target position

@@ -1,6 +1,10 @@
 #
 # Plans a path, using the KOMO motion planner
 
+# the name of the planning group.
+# can be either 'left_arm' or 'right_arm'
+string planning_group
+
 # the name of the end effector link
 string eef_link
 
@@ -12,4 +16,5 @@ float64[] target
 # if true, the trajectory will not be executed
 bool plan_only
 ---
+trajectory_msgs/JointTrajectory trajectory
 bool result

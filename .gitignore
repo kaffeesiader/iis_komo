@@ -3,9 +3,9 @@
 
 # KOMO
 
+*.log
 tmp/*.AugmentedLagrangian
 tmp/*.costReport
 tmp/*.costReport.plt
 tmp/*.opt
-tmp/*.log
 tmp/z.*

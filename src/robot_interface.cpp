@@ -16,6 +16,18 @@ RobotInterface::RobotInterface(NodeHandle &nh) {
 	_sub_right_arm_state = nh.subscribe("right_arm/joint_control/get_state", 1, &RobotInterface::CBRightArmState, this);
 	_sub_left_sdh_state = nh.subscribe("left_sdh/joint_control/get_state", 1, &RobotInterface::CBLeftSdhState, this);
 	_sub_right_sdh_state = nh.subscribe("right_sdh/joint_control/get_state", 1, &RobotInterface::CBRightSdhState, this);
+
+	ROS_INFO("Connecting to arm controllers...");
+
+	string topic = "left_arm/follow_joint_trajectory";
+	_left_arm_client.reset(new actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction>(topic, true));
+	_left_arm_client->waitForServer();
+
+	 topic = "right_arm/follow_joint_trajectory";
+	_right_arm_client.reset(new actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction>(topic, true));
+	_right_arm_client->waitForServer();
+
+	ROS_INFO("Connection established...");
 }
 
 IISRobotState RobotInterface::getState()
@@ -23,57 +35,95 @@ IISRobotState RobotInterface::getState()
 	return _current_state;
 }
 
-void RobotInterface::execute(const vector<IISRobotState> &path)
+void RobotInterface::execute(IISRobot::PlanninGroup group, const IISRobot::Path &path)
 {
-	std_msgs::Float64MultiArray msg_left;
-	msg_left.layout.dim.resize(1);
-	msg_left.layout.dim[0].size = 7;
-	msg_left.data.resize(7);
+	CHECK((group == IISRobot::LeftArm)||(group == IISRobot::RightArm), "Can only execute paths for either left or right arm!");
+	ros::Publisher &pub = (group == IISRobot::LeftArm) ? _pub_left_arm_move : _pub_right_arm_move;
 
-	std_msgs::Float64MultiArray msg_right;
-	msg_right.layout.dim.resize(1);
-	msg_right.layout.dim[0].size = 7;
-	msg_right.data.resize(7);
+	std_msgs::Float64MultiArray msg;
+	msg.layout.dim.resize(1);
+	msg.layout.dim[0].size = 7;
+	msg.data.resize(7);
 
 	ros::Rate r(100);
 
 	// iterate over trajectory points...
-	for (int i = 1; i < path.size(); ++i) {
+	for (int i = 1; i < path.d0; ++i) {
 
-		const IISRobotState &current_wp = path[i-1];
-		const IISRobotState &next_wp = path[i];
-
-		arr c_state_left(&current_wp.left_arm[0], 7);
-		arr n_state_left(&next_wp.left_arm[0], 7);
-		arr diff_left = n_state_left - c_state_left;
-
-		arr c_state_right(&current_wp.right_arm[0], 7);
-		arr n_state_right(&next_wp.right_arm[0], 7);
-		arr diff_right = n_state_right - c_state_right;
+		arr current_wp = path[i-1];
+		arr next_wp = path[i];
+		arr diff = next_wp - current_wp;
 
 		// how many interpolation steps ?
 		double steps = 12;
 
 		// ... calculate interpolation step based on loop rate ...
-		arr step_left = diff_left / steps;
-		arr step_right = diff_right / steps;
+		arr step = diff / steps;
 
 		// ... and move subsequently towards next position.
 		for (int j = 0; j < steps; ++j) {
-
 			for(int k = 0; k < 7; ++k) {
-				msg_left.data[k] = c_state_left(k);
-				msg_right.data[k] = c_state_right(k);
+				int jnt_index = 2*k+(int)group;
+				msg.data[k] = current_wp(jnt_index);
 			}
 
-			_pub_left_arm_move.publish(msg_left);
-			_pub_right_arm_move.publish(msg_right);
+			pub.publish(msg);
 
-			c_state_left += step_left;
-			c_state_right += step_right;
-
+			current_wp += step;
 			r.sleep();
 		}
+	}
+}
+
+bool RobotInterface::execute(IISRobot::PlanninGroup group, trajectory_msgs::JointTrajectory &trajectory)
+{
+	ControllerClientPtr client;
+
+	switch (group) {
+	case IISRobot::LeftArm:
+		client = _left_arm_client;
+		break;
+	case IISRobot::RightArm:
+		client = _right_arm_client;
+		break;
+	default:
+		ROS_ERROR("Can only execute trajectories for left or right robot arm!");
+		return false;
+	}
+
+	if (!client->isServerConnected()) {
+		ROS_ERROR("Controller action server not available");
+		return false;
+	}
+
+	control_msgs::FollowJointTrajectoryActionGoal goal;
+
+	trajectory.header.stamp = ros::Time::now();
+
+	goal.goal.trajectory = trajectory;
+	goal.header.stamp = ros::Time::now();
+
+	client->sendGoal(goal.goal);
+
+	if (!client->waitForResult()) {
+		ROS_INFO_STREAM("Controller action returned early");
+	}
+
+	control_msgs::FollowJointTrajectoryResultConstPtr res = client->getResult();
+
+	if (client->getState()	== actionlib::SimpleClientGoalState::SUCCEEDED) {
+
+		if(res->error_code == control_msgs::FollowJointTrajectoryResult::SUCCESSFUL) {
+			ROS_INFO("Trajectory execution succeeded!");
+			return true;
+		} else {
+			ROS_ERROR("Trajectory execution failed: ", res->error_code);
+			return false;
+		}
+
+	} else {
+		ROS_WARN_STREAM("Execution failed: " << client->getState().toString() << ": " << client->getState().getText());
+		return false;
 	}
 }
 

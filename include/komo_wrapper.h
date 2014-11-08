@@ -9,7 +9,7 @@
 #include <Motion/taskMap_constrained.h>
 #include <Motion/taskMap_transition.h>
 
-#include <iis_robot_state.h>
+#include <iis_robot.h>
 
 using namespace std;
 
@@ -26,13 +26,9 @@ public:
 	void setState(const IISRobotState &state);
 
     // with start state
-	bool plan(const string &eef, double x, double y, double z, const IISRobotState &start_state, vector<IISRobotState> &path);
-	bool plan(const string &eef, double x, double y, double z, double roll, double pitch, double yaw, const IISRobotState &start_state, vector<IISRobotState> &path);
-	bool plan(const string &eef, double x, double y, double z, double qx, double qy, double qz, double qw, const IISRobotState &start_state, vector<IISRobotState> &path);
-
-//	bool plan(const vector<double> &start_state, const string &goal_name, arr &traj);
-
-	bool plan(const string eef, const string goal_name, arr &traj);
+	bool plan(const string &eef, double x, double y, double z, const IISRobotState &start_state, IISRobot::Path &path);
+	bool plan(const string &eef, double x, double y, double z, double roll, double pitch, double yaw, const IISRobotState &start_state, IISRobot::Path &path);
+	bool plan(const string &eef, double x, double y, double z, double qx, double qy, double qz, double qw, const IISRobotState &start_state, IISRobot::Path &path);
 
 	void display(bool block = false, const char *msg = "Ready...");
 
