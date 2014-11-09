@@ -84,7 +84,7 @@ int main(int argc, char *argv[])
 
 	// check if planning was succesful
 	if(!plan_response.result) { // planning failure
-		ROS_ERROR("Trajectory planning failed!");
+		ROS_ERROR("Trajectory planning failed: %s", plan_response.error.c_str());
 		return EXIT_FAILURE;
 	}
 
@@ -92,7 +92,7 @@ int main(int argc, char *argv[])
 	iis_komo::ExecuteTrajectoryRequest exec_request;
 	exec_request.planning_group = "right_arm";
 	exec_request.trajectory = plan_response.trajectory;
-	exec_request.velocity_factor = 0.1;
+	exec_request.velocity_factor = 0.5;
 
 	iis_komo::ExecuteTrajectoryResponse exec_response;
 
@@ -102,7 +102,7 @@ int main(int argc, char *argv[])
 	}
 
 	// check if execution was succesful
-	if(!plan_response.result) { // planning failure
+	if(!exec_response.result) { // execution failure
 		ROS_ERROR("Trajectory execution failed!");
 		return EXIT_FAILURE;
 	}
@@ -146,14 +146,14 @@ int main(int argc, char *argv[])
 
 	// check if planning and execution was succesful
 	if(!plan_response.result) {
-		ROS_ERROR("Trajectory planning/execution failed!");
+		ROS_ERROR("Trajectory planning failed: %s", plan_response.error.c_str());
 		return EXIT_FAILURE;
 	}
 
 	// execute grasp phase
 	exec_request.planning_group = "right_arm";
 	exec_request.trajectory = plan_response.trajectory;
-	exec_request.velocity_factor = 0.1;
+	exec_request.velocity_factor = 0.5;
 
 	if(!exec_srv.call(exec_request, exec_response)) {
 		ROS_ERROR("Error on execution request!");
@@ -161,7 +161,7 @@ int main(int argc, char *argv[])
 	}
 
 	// check if execution was succesful
-	if(!plan_response.result) { // planning failure
+	if(!exec_response.result) { // execution failure
 		ROS_ERROR("Trajectory execution failed!");
 		return EXIT_FAILURE;
 	}
@@ -202,14 +202,14 @@ int main(int argc, char *argv[])
 
 	// check if planning and execution was succesful
 	if(!plan_response.result) {
-		ROS_ERROR("Trajectory planning/execution failed!");
+		ROS_ERROR("Trajectory planning failed: %s", plan_response.error.c_str());
 		return EXIT_FAILURE;
 	}
 
 	// execute depart phase
 	exec_request.planning_group = "right_arm";
 	exec_request.trajectory = plan_response.trajectory;
-	exec_request.velocity_factor = 0.1;
+	exec_request.velocity_factor = 0.5;
 
 	if(!exec_srv.call(exec_request, exec_response)) {
 		ROS_ERROR("Error on execution request!");
@@ -217,7 +217,7 @@ int main(int argc, char *argv[])
 	}
 
 	// check if execution was succesful
-	if(!plan_response.result) { // planning failure
+	if(!exec_response.result) { // execution failure
 		ROS_ERROR("Trajectory execution failed!");
 		return EXIT_FAILURE;
 	}

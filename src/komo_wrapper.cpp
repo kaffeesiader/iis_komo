@@ -6,6 +6,7 @@
  **/
 #include <komo_wrapper.h>
 #include <utils.h>
+#include <ros/ros.h>
 
 using namespace std;
 
@@ -22,8 +23,21 @@ KomoWrapper::KomoWrapper(const string &config_name)
 		s->cont = true;
 	}
 
-	_pos_tolerance = {0.005, 0.005, 0.005};
-	_ang_tolerance = {0.1, 0.1, 0.1};
+	double def_pos_tolerance = MT::getParameter<double>("KOMO/moveTo/defaultPositionTolerance", 0.005);
+	double def_ang_tolerance = MT::getParameter<double>("KOMO/moveTo/defaultAngularTolerance", 0.1);
+
+	_pos_tolerance = {def_pos_tolerance, def_pos_tolerance, def_pos_tolerance};
+	_ang_tolerance = {def_ang_tolerance, def_ang_tolerance, def_ang_tolerance};
+
+	//-- parameters
+	_positionPrecision = MT::getParameter<double>("KOMO/moveTo/positionPrecision", 1e4); // original 1e3
+	_collisionPrecision = MT::getParameter<double>("KOMO/moveTo/collisionPrecision", -1e0);
+	_collisionMargin = MT::getParameter<double>("KOMO/moveTo/collisionMargin", .1);
+	_jointLimitPrecision = MT::getParameter<double>("KOMO/moveTo/jointLimitPrecision", 0.1);
+	_jointLimitMargin = MT::getParameter<double>("KOMO/moveTo/jointLimitMargin", 1e5);
+	_zeroVelocityPrecision = MT::getParameter<double>("KOMO/moveTo/zeroVelocityPrecision", 1e1);
+	_alignmentPrecision = MT::getParameter<double>("KOMO/moveTo/alignmentPrecision", 1e4); // original 1e3
+	_iterations = MT::getParameter<double>("KOMO/moveTo/iterations", 1);
 }
 
 KomoWrapper::~KomoWrapper() {
@@ -90,265 +104,101 @@ void KomoWrapper::setGripperJointPos(const string &joint, double pos)
 	}
 }
 
-void KomoWrapper::arrToPath(const arr &traj, std::vector<IISRobotState> &path)
+bool KomoWrapper::plan(IISRobot::PlanninGroup group, const string &eef,
+					   const ors::Vector &goal_pos, const ors::Quaternion &goal_orient,
+					   bool position_only, IISRobot::Path &path,
+					   ors::Vector &pos_error, ors::Vector &ang_error, string &error_msg)
 {
-	// traverse through all trajectory points
-	for (int i = 0; i < traj.d0; ++i) {
-		arr pt = traj[i];
-		IISRobotState state;
-		// extract the joint positions for each arm
-		for (int j = 0; j < 7; ++j) {
-			state.left_arm[j] = pt(getWorldJointIndex("left", j));
-			state.right_arm[j] = pt(getWorldJointIndex("right", j));
-		}
-		// add extracted state to path
-		path.push_back(state);
-	}
-}
-
-bool KomoWrapper::plan(const string &eef, double x, double y, double z, const IISRobotState &start_state, IISRobot::Path &path)
-{
-	// set initial position
-	setState(start_state);
-
-	// set target position
 	ors::Shape *target = _world->getShapeByName("target");
 	if(!target) {
-		cerr << "Unable to find shape with name '" << "target" << "'" << endl;
+		error_msg = "Unable to find shape with name 'target' within model.";
+		cerr << error_msg << endl;
 		return false;
 	}
-
-	ors::Vector targetPos(x, y, z);
-	target->rel.pos = targetPos;
 
 	ors::Shape *endeff = _world->getShapeByName(eef.c_str());
 	if(!endeff) {
-		cerr << "Unable to find shape with name '" << eef << "'" << endl;
-		return false;
-	}
-
-	// make planning request, using only position constraints.
-	return planTo(*_world, *endeff, *target, path);
-}
-
-bool KomoWrapper::plan(const string &eef, double x, double y, double z, double roll, double pitch, double yaw, const IISRobotState &start_state, IISRobot::Path &path)
-{
-	// set initial position
-	setState(start_state);
-
-	ors::Shape *target = _world->getShapeByName("target");
-	if(!target) {
-		cerr << "Unable to find shape with name '" << "target" << "'" << endl;
+		error_msg = "Unable to find link with name '" + eef + "' within model.";
+		cerr << error_msg << endl;
 		return false;
 	}
 
 	// set target position...
-	ors::Vector target_pos(x, y, z);
-	target->rel.pos = target_pos;
-
+	target->rel.pos = goal_pos;
 	// ...and orientation
-	ors::Quaternion q;
-	q.setRpy(roll, pitch, yaw);
-
-	target->rel.rot = q;
-
-	ors::Shape *endeff = _world->getShapeByName(eef.c_str());
-	if(!endeff) {
-		cerr << "Unable to find shape with name '" << eef << "'" << endl;
-		return false;
-	}
+	target->rel.rot = goal_orient;
 
 	// make planning request and align all axes
-	return planTo(*_world, *endeff, *target, path, 7);
-}
+	// return planTo(*_world, *endeff, *target, path, 7);
 
-bool KomoWrapper::plan(const string &eef, double x, double y, double z, double qx, double qy, double qz, double qw, const IISRobotState &start_state, IISRobot::Path &path)
-{
-	// set initial position
-	setState(start_state);
-
-	ors::Shape *target = _world->getShapeByName("target");
-	if(!target) {
-		cerr << "Unable to find shape with name '" << "target" << "'" << endl;
-		return false;
-	}
-
-	// set target position...
-	ors::Vector target_pos(x, y, z);
-	target->rel.pos = target_pos;
-
-	// ...and orientation
-	ors::Quaternion q;
-	q.set(qw, qx, qy, qz);
-
-	target->rel.rot = q;
-
-	ors::Shape *endeff = _world->getShapeByName(eef.c_str());
-	if(!endeff) {
-		cerr << "Unable to find shape with name '" << eef << "'" << endl;
-		return false;
-	}
-
-	// make planning request and align all axes
-	return planTo(*_world, *endeff, *target, path, 7);
-}
-
-void KomoWrapper::display(bool block, const char *msg)
-{
-	_world->watch(block, msg);
-}
-
-bool KomoWrapper::validateResult(const arr &traj, ors::Shape &eef, ors::Shape &target, bool position_only)
-{
-	arr final_state = traj[traj.d0-1];
-	_world->setJointState(final_state);
-	_world->calc_fwdPropagateFrames();
-
-	cout << "EEF final pos:  " << eef.X.pos << endl;
-	cout << "EEF target pos: " << target.X.pos << endl;
-
-	// check end effector position
-	double epsilon = 0.010;
-	ors::Vector dist = target.X.pos - eef.X.pos;
-	cout << "Position offset: " << dist.length() << endl;
-
-	if(dist.length() > epsilon) {
-		cerr << "Trajectory validation failed - position constraint not satisfied." << endl;
-		return false;
-	}
-	// ...and orientation if required
-	if(!position_only) {
-		cout << "ORIENTATION CONSTRAINT VALIDATION NOT IMPLEMENTED YET!" << endl;
-	}
-	// arm joint limits
-	double limits[] = {
-		2.96705972839,
-		2.09439510239,
-		2.96705972839,
-		2.09439510239,
-		2.96705972839,
-		2.09439510239,
-		2.96705972839
-					  };
-
-	// validation steps neccessary for each single point
-	for(int i = 0; i < traj.d0 - 1; ++i) {
-		arr pt = traj[i];
-		// validate joint limits
-		for (int j = 0; j < 7; ++j) {
-			int left_index = getWorldJointIndex("left", j);
-			int right_index = getWorldJointIndex("right", j);
-			double left_pos = pt(left_index);
-			double right_pos = pt(right_index);
-			double limit = limits[j];
-
-			if(left_pos > limit || left_pos < -limit) {
-				cerr << "Joint limit violated for joint " << j << " in left arm! Value: " << left_pos << endl;
-				return false;
-			}
-			if(right_pos > limit || right_pos < -limit) {
-				cerr << "Joint limit violated for joint " << j << " in right arm! Value: " << right_pos << endl;
-				return false;
-			}
-		}
-	}
-
-	cout << "Trajectory validation OK." << endl;
-	return true;
-}
-
-bool KomoWrapper::planTo(ors::KinematicWorld &world,
-                           ors::Shape &endeff,
-                           ors::Shape &target,
-                           arr &traj,
-                           byte whichAxesToAlign,
-                           uint iterate)
-{
-	//-- parameters
-	double posPrec = MT::getParameter<double>("KOMO/moveTo/precision", 1e4); // original 1e3
-	double colPrec = MT::getParameter<double>("KOMO/moveTo/collisionPrecision", -1e0);
-	double limitMargin = MT::getParameter<double>("KOMO/moveTo/limitMargin", 0.1);
-	double limitPrec = MT::getParameter<double>("KOMO/moveTo/limitPrecision", 1e5);
-	double margin = MT::getParameter<double>("KOMO/moveTo/collisionMargin", .1);
-	double zeroVelPrec = MT::getParameter<double>("KOMO/moveTo/finalVelocityZeroPrecision", 1e1);
-	double alignPrec = MT::getParameter<double>("KOMO/moveTo/alignPrecision", 1e4); // original 1e3
-	double iterations = MT::getParameter<double>("KOMO/moveTo/iterations", 1);
-
-	cout << "Position precision     : " << posPrec << endl;
-	cout << "Align precision        : " << alignPrec << endl;
-	cout << "Collision margin       : " << margin << endl;
-	cout << "Limit margin           : " << limitMargin << endl;
-	cout << "Zero velocity precision: " << zeroVelPrec << endl;
-	cout << "Collision precision    : " << colPrec << endl;
-	cout << "Joint limit precision  : " << limitPrec << endl;
-	cout << "Iterations             : " << iterations << endl;
 
 	_world->calc_fwdPropagateShapeFrames();
 	display(false, "planning...");
+
+	target->cont = false; // don't know if this is necessary...
+
 	//-- set up the MotionProblem
-	target.cont=false;
-
-	MotionProblem MP(world);
-
+	MotionProblem MP(*_world);
 //	MP.loadTransitionParameters(); //->move transition costs to tasks!
-	world.swift().initActivations(world);
+	_world->swift().initActivations(*_world);
 
 	TaskCost *c;
+	// compute the range of time slices where the position constraint has to be enforced (last 10%)
 	uint offset = (uint)(MP.T * 0.1);
 
-	c = MP.addTask("EEF_position", new DefaultTaskMap(posTMT, endeff.index, NoVector, target.index, NoVector));
-	c->setCostSpecs(MP.T-offset, MP.T, {0.}, posPrec);
+	// TaskMap for end effector position
+	c = MP.addTask("EEF_position", new DefaultTaskMap(posTMT, endeff->index, NoVector, target->index, NoVector));
+	c->setCostSpecs(MP.T-offset, MP.T, {0.}, _positionPrecision);
 
-	c = MP.addTask("EEF_velocity", new DefaultTaskMap(posTMT, world, endeff.name)); //endeff.index));
+	// TaskMap for zero velocity at goal
+	c = MP.addTask("EEF_velocity", new DefaultTaskMap(posTMT, *_world, endeff->name)); //endeff.index));
 	//  c = MP.addTask("q_vel", new DefaultTaskMap(qItselfTMT, world));
-	c->setCostSpecs(MP.T, MP.T, {0.}, zeroVelPrec);
-	c->map.order=1; //make this a velocity variable!
+	c->setCostSpecs(MP.T, MP.T, {0.}, _zeroVelocityPrecision);
+	c->map.order = 1; //make this a velocity variable!
 
-	// enforce joint limits
-//	LimitsConstraint *lc = new LimitsConstraint();
-//	lc->margin = limitMargin;
-//	c = MP.addTask("Joint_limits", lc);
-
+	// TaskMap to enforce joint limits on all time slices
 	c = MP.addTask("Joint_limits", new DefaultTaskMap(qLimitsTMT));
-	c->setCostSpecs(0, MP.T, {0.}, limitPrec);
+	c->setCostSpecs(0, MP.T, {0.}, _jointLimitPrecision);
 
-	if(colPrec<0){ //interpreted as hard constraint
-		c = MP.addTask("Collisions", new CollisionConstraint(margin));
+	// enable collision checking
+	if(_collisionPrecision < 0){ //interpreted as hard constraint
+		c = MP.addTask("Collisions", new CollisionConstraint(_collisionMargin));
 	}else{ //cost term
-		c = MP.addTask("Collisions", new ProxyTaskMap(allPTMT, {0}, margin));
+		c = MP.addTask("Collisions", new ProxyTaskMap(allPTMT, {0}, _collisionMargin));
 	}
-	c->setCostSpecs(0, MP.T, {0.}, colPrec);
+	c->setCostSpecs(0, MP.T, {0.}, _collisionPrecision);
 
-	c = MP.addTask("Transitions", new TransitionTaskMap(world));
+	// TaskMap for transition costs
+	c = MP.addTask("Transitions", new TransitionTaskMap(*_world));
 	c->map.order=2;
 	c->setCostSpecs(0, MP.T, {0.}, 1e0);
 
-	for(uint i=0;i<3;i++) if(whichAxesToAlign&(1<<i)){
-		ors::Vector axis;
-		axis.setZero();
-		axis(i)=1.;
-		c = MP.addTask(STRING("EEF_allign_"<<i), new DefaultTaskMap(vecAlignTMT, endeff.index, axis, target.index, axis));
-		c->setCostSpecs(MP.T-offset, MP.T, {1.}, alignPrec);
-		arr test;
-		c->map.phi(test, NoArr, world);
-		cout << "Test" << i << ": " << test << endl;
+	// TaskMaps for orientation constraints
+	if(!position_only) {
+		for(uint i=0;i<3;i++) {
+			ors::Vector axis;
+			axis.setZero();
+			axis(i) = 1.;
+			c = MP.addTask(STRING("EEF_allign_" << i), new DefaultTaskMap(vecAlignTMT, endeff->index, axis, target->index, axis));
+			c->setCostSpecs(MP.T-offset, MP.T, {1.}, _alignmentPrecision);
+		}
 	}
 
 	//-- create the Optimization problem (of type kOrderMarkov)
 	MotionProblemFunction MF(MP);
 	arr x = replicate(MP.x0, MP.T+1);
-	rndGauss(x,.01,true); //don't initialize at a singular config
+	rndGauss(x, .01, true); //don't initialize at a singular config
 
 	//-- optimize
-	ors::KinematicWorld::setJointStateCount=0;
-	for(uint k=0;k<iterations;k++){
+	ors::KinematicWorld::setJointStateCount = 0;
+	for(uint k = 0; k < _iterations; k++) {
 		MT::timerStart();
-		if(colPrec<0){
+		if(_collisionPrecision < 0){
 			// verbose=2 shows gnuplot after optimization process
 			// verbose=1 shows optimization steps
 			optConstrained(x, NoArr, Convert(MF), OPT(verbose=1, stopIters=100, maxStep=.5, stepInc=2., allowOverstep=false));
 			//verbose=2, stopIters=100, maxStep=.5, stepInc=2./*, nonStrictSteps=(!k?15:5)*/));
-		}else{
+		} else {
 			optNewton(x, Convert(MF), OPT(verbose=1, stopIters=100, maxStep=.5, stepInc=2., nonStrictSteps=(!k?15:5)));
 		}
 		double opt_time = MT::timerRead();
@@ -359,24 +209,122 @@ bool KomoWrapper::planTo(ors::KinematicWorld &world,
 		MP.costReport(false);
 	}
 
+	CHECK(x.d0 > 0, "Trajectory is empty...");
+
 	cout << "Optimization process finished" << endl;
 	cout << "Optimization time:  " << MT::timerRead() << endl;
 	cout << "SetJointStateCount: " << ors::KinematicWorld::setJointStateCount << endl;
 	cout << "Validating planning result..." << endl;
 
-	bool pos_only = (whichAxesToAlign == 0);
-	bool valid = validateResult(x, endeff, target, pos_only);
+	arr final_state = x[x.d0-1];
+	_world->setJointState(final_state);
+	_world->calc_fwdPropagateFrames();
 
-	if(valid) {
-		traj = x;
-	}
+	computePositionError(*endeff, *target, pos_error);
+	computeAlignmentError(*endeff, *target, ang_error);
+
+	cout << "EEF final pos:   " << endeff->X.pos << endl;
+	cout << "EEF target pos:  " << target->X.pos << endl;
+	cout << "Position error:  " << pos_error << endl;
+	cout << "Alignment error: " << ang_error << endl;
 
 	cout << "Displaying trajectory..." << endl;
-	displayTrajectory(x, 1, world, "Planning result", 0.05);
+	displayTrajectory(x, 1, *_world, "Planning result", 0.05);
+	cout << "Validating trajectory..." << endl;
 
-	world.watch(false, "Ready...");
+	// check end effector goal position
+	if(!withinTolerance(pos_error, _pos_tolerance)) {
+		error_msg = "Goal position not within tolerance values.";
+		cerr << "Validation failed!" << endl;
+		return false;
+	}
 
-	return valid;
+	// check end effector goal alignment
+	if(!withinTolerance(ang_error, _ang_tolerance)) {
+		error_msg = "Goal alignment not within tolerance values.";
+		cerr << "Validation failed!" << endl;
+		return false;
+	}
+
+	// check joint limits
+	if(!validateJointLimits(x, error_msg)) {
+		cerr << "Validation failed!" << endl;
+		return false;
+	}
+
+	// watch out for collisions
+	if(!validateCollisions(x, error_msg)) {
+		cerr << "Validation failed!" << endl;
+		return false;
+	}
+
+	cout << "Trajectory validation ok!" << endl;
+	path = x;
+
+	return true;
+}
+
+void KomoWrapper::display(bool block, const char *msg)
+{
+	_world->watch(block, msg);
+}
+
+void KomoWrapper::computePositionError(const ors::Shape &eef, const ors::Shape &target, ors::Vector &error) {
+	error = eef.X.pos - target.X.pos;
+}
+
+void KomoWrapper::computeAlignmentError(const ors::Shape &eef, const ors::Shape &target, ors::Vector &error) {
+	cerr << "ALIGNMENT ERROR COMPUTATION NOT IMPLEMENTED YET!!!" << endl;
+//	ors::Quaternion diff = eef.X.rot - target.X.rot;
+	//	cout << "Distance between quats: " << diff << endl;
+}
+
+bool KomoWrapper::withinTolerance(const ors::Vector &error, const ors::Vector &tolerance)
+{
+	return (fabs(error.x) <= tolerance.x) &&
+			(fabs(error.y) <= tolerance.y) &&
+			(fabs(error.z) <= tolerance.z);
+}
+
+bool KomoWrapper::validateJointLimits(const arr &traj, string &error_msg)
+{
+	arr limits = IISRobot::get_arm_joint_limits();
+
+	// validation steps neccessary for each single point
+	for(int i = 0; i < traj.d0 - 1; ++i) {
+		arr pt = traj[i];
+		// validate joint limits
+		for (int j = 0; j < 7; ++j) {
+			int left_index = getWorldJointIndex("left", j);
+			int right_index = getWorldJointIndex("right", j);
+			double left_pos = pt(left_index);
+			double right_pos = pt(right_index);
+			double limit = limits(j);
+
+			if(fabs(left_pos) > limit) {
+				stringstream ss;
+				ss << "Joint limit violated for joint " << j << " in left arm! Value: " << left_pos;
+				error_msg = ss.str();
+				cerr << error_msg << endl;
+				return false;
+			}
+			if(fabs(right_pos) > limit) {
+				stringstream ss;
+				ss << "Joint limit violated for joint " << j << " in right arm! Value: " << left_pos;
+				error_msg = ss.str();
+				cerr << error_msg << endl;
+				return false;
+			}
+		}
+	}
+
+	return true;
+}
+
+bool KomoWrapper::validateCollisions(const arr &traj, string &error_msg)
+{
+	cerr << "COLLISION VALIDATION NOT IMPLEMENTED YET!!!" << endl;
+	return true;
 }
 
 }
