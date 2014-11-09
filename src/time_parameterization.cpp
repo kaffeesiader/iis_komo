@@ -11,7 +11,7 @@ static const double ROUNDING_THRESHOLD = 0.01;
 TimeParameterization::TimeParameterization(unsigned int max_iterations, double max_time_change_per_it)
 	: max_iterations_(max_iterations),
 	  max_time_change_per_it_(max_time_change_per_it),
-	  velocity_factor_(0.1)
+	  velocity_factor_(0.5)
 {}
 
 TimeParameterization::~TimeParameterization()
@@ -321,6 +321,16 @@ bool TimeParameterization::computeTimeStamps(trajectory_msgs::JointTrajectory& t
 	updateTrajectory(trajectory, time_diff);
 
 	return true;
+}
+
+void TimeParameterization::clearTimeParams(trajectory_msgs::JointTrajectory &trajectory) {
+	// iterate over all waypoints and clear all time, velocity and accelleration related values.
+	for (int i = 0; i < trajectory.points.size(); ++i) {
+		trajectory_msgs::JointTrajectoryPoint &pt = trajectory.points[i];
+		pt.velocities.clear();
+		pt.accelerations.clear();
+		pt.time_from_start = ros::Duration(0);
+	}
 }
 
 } // namespace iis_komo

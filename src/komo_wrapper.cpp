@@ -21,6 +21,9 @@ KomoWrapper::KomoWrapper(const string &config_name)
 	for(ors::Shape *s:_world->shapes) {
 		s->cont = true;
 	}
+
+	_pos_tolerance = {0.005, 0.005, 0.005};
+	_ang_tolerance = {0.1, 0.1, 0.1};
 }
 
 KomoWrapper::~KomoWrapper() {

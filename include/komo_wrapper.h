@@ -24,6 +24,8 @@ public:
 	~KomoWrapper();
 
 	void setState(const IISRobotState &state);
+	void setPositionTolerance(const ors::Vector tolerance) { _pos_tolerance = tolerance; }
+	void setAngularTolerance(const ors::Vector tolerance) { _ang_tolerance = tolerance; }
 
     // with start state
 	bool plan(const string &eef, double x, double y, double z, const IISRobotState &start_state, IISRobot::Path &path);
@@ -35,6 +37,8 @@ public:
 private:
 
     ors::KinematicWorld *_world;
+	ors::Vector _pos_tolerance;
+	ors::Vector _ang_tolerance;
 
 	void setGripperJointPos(const string &joint, double pos);
 	void setGripperState(const string &arm, const double *state);

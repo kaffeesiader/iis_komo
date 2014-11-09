@@ -1,5 +1,6 @@
 #include <ros/ros.h>
-#include <iis_komo/Move.h>
+#include <iis_komo/PlanTrajectory.h>
+#include <iis_komo/ExecuteTrajectory.h>
 #include <iis_schunk_hardware/GripCmd.h>
 
 int main(int argc, char *argv[])
@@ -10,34 +11,51 @@ int main(int argc, char *argv[])
 	ros::AsyncSpinner spinner(1);
 	spinner.start();
 
+	// used for controlling the hand
 	ros::Publisher pub_grasp = nh.advertise<iis_schunk_hardware::GripCmd>("right_sdh/joint_control/grip_hand", 1, true);
 
-	ROS_INFO("Creating service client for KOMO...");
+	/* -------------------- connect to planning and execution service -------------------------- */
 
-	// create a service client for the KOMO service...
-	ros::ServiceClient client = nh.serviceClient<iis_komo::Move>("motion_control/move");
+	ROS_INFO("Creating service clients...");
+
+	// create service clients for planning and execution...
+	ros::ServiceClient plan_srv = nh.serviceClient<iis_komo::PlanTrajectory>("motion_control/plan_trajectory");
+	ros::ServiceClient exec_srv = nh.serviceClient<iis_komo::ExecuteTrajectory>("motion_control/execute_trajectory");
 	// ... and wait for the service to come up if necessary
-	while(!client.exists()) {
-		ROS_WARN("Waiting for KOMO service to come up...");
-		client.waitForExistence(ros::Duration(30));
+	while(!plan_srv.exists()) {
+		ROS_WARN("Waiting for planning service to come up...");
+		plan_srv.waitForExistence(ros::Duration(10));
+	}
+	while(!exec_srv.exists()) {
+		ROS_WARN("Waiting for execution service to come up...");
+		exec_srv.waitForExistence(ros::Duration(10));
 	}
 
-	ROS_INFO("Service client created!");
+	ROS_INFO("Service clients created!");
 
-	ROS_INFO("Planning and moving to pregrasp position");
+	/* ------------------- reaching phase --------------------- */
 
 	// define the service request
-	iis_komo::MoveRequest request;
-	request.planning_group = "right_arm";
-	request.eef_link = "right_sdh_tip_link";
-	request.plan_only = false;
+	iis_komo::PlanTrajectoryRequest plan_request;
+	// specify the planning group and the reference frame to plan for
+	plan_request.planning_group = "right_arm";
+	plan_request.eef_link = "right_sdh_tip_link";
+	// allow some tolerances for the pregrasp position
+	plan_request.position_tolerance.x = 0.03;
+	plan_request.position_tolerance.y = 0.03;
+	plan_request.position_tolerance.z = 0.03;
+
+	plan_request.angular_tolerance.x = 0.1; // around 5 deg
+	plan_request.angular_tolerance.y = 0.1; // around 5 deg
+	plan_request.angular_tolerance.z = 0.1; // around 5 deg
+
 	// specify target position
-	request.target.push_back(0.3); // pos x
-	request.target.push_back(0.3); // pos y
-	request.target.push_back(0.4); // pos z
-	request.target.push_back(0.0); // orient r
-	request.target.push_back(3.14);// orient p
-	request.target.push_back(0.0); // orient y
+	plan_request.target.push_back(0.3); // pos x
+	plan_request.target.push_back(0.3); // pos y
+	plan_request.target.push_back(0.4); // pos z
+	plan_request.target.push_back(0.0); // orient r
+	plan_request.target.push_back(3.14);// orient p
+	plan_request.target.push_back(0.0); // orient y
 
 	// alternatively use quaternion ...
 //	request.target.push_back(0.3); // pos x
@@ -54,16 +72,38 @@ int main(int argc, char *argv[])
 //	request.target.push_back(0.4); // pos z
 
 	// create response object
-	iis_komo::MoveResponse response;
+	iis_komo::PlanTrajectoryResponse plan_response;
 
-	if(!client.call(request, response)) {
-		ROS_ERROR("Error executing KOMO service request!");
+	ROS_INFO("Planning and moving to pregrasp position");
+
+	// call the planning service and check result
+	if(!plan_srv.call(plan_request, plan_response)) { // communication failure
+		ROS_ERROR("Error on planning request!");
 		return EXIT_FAILURE;
 	}
 
-	// check if planning and execution was succesful
-	if(!response.result) {
-		ROS_ERROR("Trajectory planning/execution failed!");
+	// check if planning was succesful
+	if(!plan_response.result) { // planning failure
+		ROS_ERROR("Trajectory planning failed!");
+		return EXIT_FAILURE;
+	}
+
+	// execute reaching phase
+	iis_komo::ExecuteTrajectoryRequest exec_request;
+	exec_request.planning_group = "right_arm";
+	exec_request.trajectory = plan_response.trajectory;
+	exec_request.velocity_factor = 0.1;
+
+	iis_komo::ExecuteTrajectoryResponse exec_response;
+
+	if(!exec_srv.call(exec_request, exec_response)) {
+		ROS_ERROR("Error on execution request!");
+		return EXIT_FAILURE;
+	}
+
+	// check if execution was succesful
+	if(!plan_response.result) { // planning failure
+		ROS_ERROR("Trajectory execution failed!");
 		return EXIT_FAILURE;
 	}
 
@@ -77,24 +117,52 @@ int main(int argc, char *argv[])
 
 	// allow the gripper to open
 	sleep(2);
+
+	/* ---------------------------- grasp phase ------------------------------- */
+
 	ROS_INFO("Planning and moving to grasp position");
 
-	request.target.clear();
-	request.target.push_back(0.3); // pos x
-	request.target.push_back(0.3); // pos y
-	request.target.push_back(0.15); // pos z
-	request.target.push_back(0.0); // orient r
-	request.target.push_back(3.14);// orient p
-	request.target.push_back(0.0); // orient y
+	plan_request.target.clear();
+	plan_request.target.push_back(0.3); // pos x
+	plan_request.target.push_back(0.3); // pos y
+	plan_request.target.push_back(0.15); // pos z
+	plan_request.target.push_back(0.0); // orient r
+	plan_request.target.push_back(3.14);// orient p
+	plan_request.target.push_back(0.0); // orient y
 
-	if(!client.call(request, response)) {
+	// the tolerances should be stricter for grasp pose
+	plan_request.position_tolerance.x = 0.003;
+	plan_request.position_tolerance.y = 0.003;
+	plan_request.position_tolerance.z = 0.003;
+
+	plan_request.angular_tolerance.x = 0.1; // around 5 deg
+	plan_request.angular_tolerance.y = 0.1; // around 5 deg
+	plan_request.angular_tolerance.z = 0.1; // around 5 deg
+
+	if(!plan_srv.call(plan_request, plan_response)) {
 		ROS_ERROR("Error executing KOMO service request!");
 		return EXIT_FAILURE;
 	}
 
 	// check if planning and execution was succesful
-	if(!response.result) {
+	if(!plan_response.result) {
 		ROS_ERROR("Trajectory planning/execution failed!");
+		return EXIT_FAILURE;
+	}
+
+	// execute grasp phase
+	exec_request.planning_group = "right_arm";
+	exec_request.trajectory = plan_response.trajectory;
+	exec_request.velocity_factor = 0.1;
+
+	if(!exec_srv.call(exec_request, exec_response)) {
+		ROS_ERROR("Error on execution request!");
+		return EXIT_FAILURE;
+	}
+
+	// check if execution was succesful
+	if(!plan_response.result) { // planning failure
+		ROS_ERROR("Trajectory execution failed!");
 		return EXIT_FAILURE;
 	}
 
@@ -106,24 +174,51 @@ int main(int argc, char *argv[])
 
 	sleep(2);
 
+	/* --------------------- depart phase --------------------------- */
+
 	ROS_INFO("Planning and moving to postgrasp position");
 
-	request.target.clear();
-	request.target.push_back(0.0); // pos x
-	request.target.push_back(0.0); // pos y
-	request.target.push_back(0.4); // pos z
-	request.target.push_back(0.0); // orient r
-	request.target.push_back(3.14);// orient p
-	request.target.push_back(0.0); // orient y
+	plan_request.target.clear();
+	plan_request.target.push_back(0.0); // pos x
+	plan_request.target.push_back(0.0); // pos y
+	plan_request.target.push_back(0.4); // pos z
+	plan_request.target.push_back(0.0); // orient r
+	plan_request.target.push_back(3.14);// orient p
+	plan_request.target.push_back(0.0); // orient y
 
-	if(!client.call(request, response)) {
+	// the tolerances should be stricter for grasp pose
+	plan_request.position_tolerance.x = 0.03;
+	plan_request.position_tolerance.y = 0.03;
+	plan_request.position_tolerance.z = 0.03;
+
+	plan_request.angular_tolerance.x = 0.1; // around 5 deg
+	plan_request.angular_tolerance.y = 0.1; // around 5 deg
+	plan_request.angular_tolerance.z = 0.1; // around 5 deg
+
+	if(!plan_srv.call(plan_request, plan_response)) {
 		ROS_ERROR("Error executing KOMO service request!");
 		return EXIT_FAILURE;
 	}
 
 	// check if planning and execution was succesful
-	if(!response.result) {
+	if(!plan_response.result) {
 		ROS_ERROR("Trajectory planning/execution failed!");
+		return EXIT_FAILURE;
+	}
+
+	// execute depart phase
+	exec_request.planning_group = "right_arm";
+	exec_request.trajectory = plan_response.trajectory;
+	exec_request.velocity_factor = 0.1;
+
+	if(!exec_srv.call(exec_request, exec_response)) {
+		ROS_ERROR("Error on execution request!");
+		return EXIT_FAILURE;
+	}
+
+	// check if execution was succesful
+	if(!plan_response.result) { // planning failure
+		ROS_ERROR("Trajectory execution failed!");
 		return EXIT_FAILURE;
 	}
 

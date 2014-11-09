@@ -12,23 +12,30 @@ namespace iis_komo {
 class TimeParameterization {
 
 public:
+
 	TimeParameterization(unsigned int max_iterations = 100, double max_time_change_per_it = .01);
 	~TimeParameterization();
-	bool computeTimeStamps(trajectory_msgs::JointTrajectory &trajectory) const;
 
-private:
-	unsigned int max_iterations_; /// @brief maximum number of iterations to find solution
-	double max_time_change_per_it_; /// @brief maximum allowed time change per iteration in seconds
-	double velocity_factor_; /// @brief percentage of maximum velocity
+	// compute the time parameterization for given trajectory
+	bool computeTimeStamps(trajectory_msgs::JointTrajectory &trajectory) const;
+	// clear previously computed time parameterization of given trajectory
+	void clearTimeParams(trajectory_msgs::JointTrajectory &trajectory);
 
 	void set_velocity_factor(double factor) { velocity_factor_ = factor;}
 	double get_velocity_factor() {return velocity_factor_;}
+
+private:
+
+	unsigned int max_iterations_; /// @brief maximum number of iterations to find solution
+	double max_time_change_per_it_; /// @brief maximum allowed time change per iteration in seconds
+	double velocity_factor_; /// @brief percentage of maximum velocity
 
 	void applyVelocityConstraints(trajectory_msgs::JointTrajectory &trajectory, std::vector<double> &time_diff) const;
 	void applyAccelerationConstraints(trajectory_msgs::JointTrajectory &trajectory, std::vector<double> &time_diff) const;
 	double findT1( const double d1, const double d2, double t1, const double t2, const double a_max) const;
 	double findT2( const double d1, const double d2, const double t1, double t2, const double a_max) const;
 	void updateTrajectory(trajectory_msgs::JointTrajectory& trajectory, const std::vector<double>& time_diff) const;
+
 };
 
 }

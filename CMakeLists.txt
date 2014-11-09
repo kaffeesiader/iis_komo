@@ -9,6 +9,7 @@ set(CMAKE_BUILD_TYPE Debug)
 find_package(catkin REQUIRED COMPONENTS
   message_generation
   trajectory_msgs
+  geometry_msgs
   roscpp
   actionlib
 )
@@ -23,6 +24,8 @@ find_package(catkin REQUIRED COMPONENTS
 add_service_files(
    FILES
    Move.srv
+   PlanTrajectory.srv
+   ExecuteTrajectory.srv
 )
 
 ## Generate actions in the 'action' folder
@@ -36,6 +39,7 @@ add_service_files(
 generate_messages(
    DEPENDENCIES
    trajectory_msgs
+   geometry_msgs
 )
 
 

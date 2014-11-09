@@ -1,7 +1,8 @@
 #include <Ors/ors.h>
 #include <ros/ros.h>
 
-#include <iis_komo/Move.h>
+#include <iis_komo/ExecuteTrajectory.h>
+#include <iis_komo/PlanTrajectory.h>
 #include <robot_interface.h>
 #include <komo_wrapper.h>
 #include <time_parameterization.h>
@@ -21,8 +22,11 @@ public:
 	{
 		_komo = komo;
 		_robot = robot;
-		_move_srv = nh.advertiseService("motion_control/move", &KomoInterface::callbackMove, this);
-		// wait for initial state
+//		_move_srv = nh.advertiseService("motion_control/move", &KomoInterface::callbackMove, this);
+		_plan_srv = nh.advertiseService("motion_control/plan_trajectory", &KomoInterface::callbackPlan, this);
+		_execute_srv = nh.advertiseService("motion_control/execute_trajectory", &KomoInterface::callbackExecute, this);
+
+		// wait for initial state (TODO: improve this!)
 		sleep(1);
 
 		_komo->setState(_robot->getState());
@@ -33,11 +37,13 @@ private:
 
 	KomoWrapper *_komo;
 	RobotInterface *_robot;
-
-	ServiceServer _move_srv;
 	TimeParameterization _time_param;
 
-	bool callbackMove(iis_komo::Move::Request &request, iis_komo::Move::Response &response) {
+	ServiceServer _move_srv;
+	ServiceServer _execute_srv;
+	ServiceServer _plan_srv;
+
+	bool callbackPlan(iis_komo::PlanTrajectory::Request &request, iis_komo::PlanTrajectory::Response &response) {
 		string eef = request.eef_link;
 		size_t sz = request.target.size();
 
@@ -57,6 +63,32 @@ private:
 		bool success;
 		IISRobot::Path path;
 		IISRobotState state = _robot->getState();
+
+		// define some default values to use if no tolerances provided...
+		ors::Vector pos_tol = { 0.005, 0.005, 0.005 };
+		ors::Vector ang_tol = { 0.1, 0.1, 0.1 };
+
+		// set tolerance values if provided
+		if((request.position_tolerance.x > 0.0) ||
+			(request.position_tolerance.y > 0.0) ||
+			(request.position_tolerance.z > 0.0))
+		{
+			pos_tol.x = request.position_tolerance.x;
+			pos_tol.y = request.position_tolerance.y;
+			pos_tol.z = request.position_tolerance.z;
+		}
+
+		if((request.angular_tolerance.x > 0.0) ||
+			(request.angular_tolerance.y > 0.0) ||
+			(request.angular_tolerance.z > 0.0))
+		{
+			ang_tol.x = request.angular_tolerance.x;
+			ang_tol.y = request.angular_tolerance.y;
+			ang_tol.z = request.angular_tolerance.z;
+		}
+
+		_komo->setPositionTolerance(pos_tol);
+		_komo->setAngularTolerance(ang_tol);
 
 		switch (sz) {
 		case 3:
@@ -102,34 +134,71 @@ private:
 			return true;
 		}
 
-		if(!success) {
+		if(success) {
+			ROS_INFO("Planning successful!");
+			komo_path_to_joint_traj(group, path, response.trajectory);
+			response.result = true;
+
+			ROS_INFO("Planning request completed!");
+		} else {
 			ROS_WARN("Planning failed!");
 			response.result = false;
+		}
 
+		return true;
+//		_time_param.computeTimeStamps(response.trajectory);
+
+
+//		if(!request.plan_only) {
+//			ROS_INFO("Executing trajectory...");
+//			success = _robot->execute(group, response.trajectory);
+//			if(success) {
+//				ROS_INFO("Trajectory execution complete.");
+//			} else {
+//				ROS_ERROR("Trajectory execution failed.");
+//			}
+//		}
+
+	}
+
+	bool callbackExecute(iis_komo::ExecuteTrajectory::Request &request, iis_komo::ExecuteTrajectory::Response &response) {
+
+		ROS_INFO("Received trajectory execution request for planning group '%s'", request.planning_group.c_str());
+		IISRobot::PlanninGroup group;
+
+		if(request.planning_group == "left_arm") {
+			group = IISRobot::LeftArm;
+		} else if(request.planning_group == "right_arm") {
+			group = IISRobot::RightArm;
+		} else {
+			ROS_ERROR("Unknown planning group '%s'.", request.planning_group.c_str());
+			response.result = false;
 			return true;
 		}
 
-		ROS_INFO("Planning successful!");
+		double vel_factor = 0.5;
 
-		komo_path_to_joint_traj(group, path, response.trajectory);
-		_time_param.computeTimeStamps(response.trajectory);
-
-
-		if(!request.plan_only) {
-			ROS_INFO("Executing trajectory...");
-			success = _robot->execute(group, response.trajectory);
-			if(success) {
-				ROS_INFO("Trajectory execution complete.");
-			} else {
-				ROS_ERROR("Trajectory execution failed.");
-			}
+		if(request.velocity_factor > 0) {
+			vel_factor = request.velocity_factor;
 		}
+		ROS_INFO("Computing time parameterization (velocity factor: %.2f)", vel_factor);
+		_time_param.clearTimeParams(request.trajectory);
+		_time_param.set_velocity_factor(vel_factor);
+		_time_param.computeTimeStamps(request.trajectory);
 
-		response.result = success;
-		ROS_INFO("Planning request completed!");
+		ROS_INFO("Executing trajectory...");
+
+		if(_robot->execute(group, request.trajectory)) {
+			ROS_INFO("Trajectory execution complete.");
+			response.result = true;
+		} else {
+			ROS_ERROR("Trajectory execution failed.");
+			response.result = false;
+		}
 
 		return true;
 	}
+
 };
 
 }
