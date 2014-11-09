@@ -16,25 +16,3 @@ mass: 1.0
 type: 1
 dimensions: [1.2,2.3,0.09]" &
 
-sleep 1
-
-# collidable box
-rostopic pub /simulation/scene/AddPrimitiveShape planning_scene_plugin/AddPrimitiveShape -1 "object_id: 'obstacle1' 
-pose:
-  position: {x: 0.3, y: 0.25, z: 0.19}
-  orientation: {x: 0.0, y: 0.0, z: 0.0, w: 1.0}
-disable_collision_checking: false
-mass: 1.0
-type: 1
-dimensions: [0.2,0.2,0.2]" &
-
-sleep 1
-
-rostopic pub /simulation/scene/AddPrimitiveShape planning_scene_plugin/AddPrimitiveShape -1 "object_id: 'obstacle2' 
-pose:
-  position: {x: 0.3, y: 0.8, z: 0.19}
-  orientation: {x: 0.0, y: 0.0, z: 0.0, w: 1.0}
-disable_collision_checking: false
-mass: 1.0
-type: 1
-dimensions: [0.2,0.2,0.2]" &

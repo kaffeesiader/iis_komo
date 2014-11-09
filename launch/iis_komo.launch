@@ -1,0 +1,19 @@
+<launch>
+    
+    <arg name="config_name" default="simulation" />
+    
+    <!-- upload the robot description to the parameter server -->
+    <include file="$(find iis_robot)/launch/upload.launch">
+	<arg name="file_name" value="iis_robot_table.xacro" />
+    </include>
+	
+    <group ns="$(arg config_name)">
+ 
+	<!-- launch hardware adapter -->
+	<include file="$(find iis_komo)/launch/hardware_adapter.launch" />
+    </group>
+    
+    <!-- start KOMO node -->
+    <node name="iis_komo" pkg="iis_komo" type="run_komo.sh" output="screen" args="simulation" />
+	      
+</launch>

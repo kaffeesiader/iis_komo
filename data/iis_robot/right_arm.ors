@@ -14,7 +14,7 @@ joint right_arm_2_joint (right_arm_2_link right_arm_3_link) { A=<T t(0 0 0.2) d(
 joint right_arm_3_joint (right_arm_3_link right_arm_4_link) { A=<T t(0.0 0 0.2) d(180 0 0 1)> B=<T t(0 0 0) d(180 0 0 1)> Q=<T d(0 1 0 0)> limits=[-2.09439510239 2.09439510239]  ctrl_limits=[0.226892802759 306] }
 joint right_arm_4_joint (right_arm_4_link right_arm_5_link) { A=<T t(0 0 0.19) d(-90 0 1 0)> B=<T t(0 0 0) d(90 0 1 0)> Q=<T d(0 1 0 0)> limits=[-2.96705972839 2.96705972839]  ctrl_limits=[0.226892802759 204] }
 joint right_arm_5_joint (right_arm_5_link right_arm_6_link) { A=<T t(0.0 0 0.2)> B=<T t(0 0 0) d(-90 0 1 0)> Q=<T d(0 1 0 0)> limits=[-2.09439510239 2.09439510239]  ctrl_limits=[0.314159265359 306] }
-joint right_arm_6_joint (right_arm_6_link right_arm_7_link) { A=<T t(0.078 0 0)> B=<T t(0 0 0)> Q=<T d(0 1 0 0)> limits=[-2.96705972839 2.96705972839]  ctrl_limits=[0.314159265359 204] }
+joint right_arm_6_joint (right_arm_6_link right_arm_7_link) { A=<T t(0.078 0 0) > B=<T t(0 0 0)> Q=<T d(0 1 0 0)> limits=[-2.96705972839 2.96705972839]  ctrl_limits=[0.314159265359 204] }
 
 shape right_kuka_base(right_arm_base_link)        { type=3, rel=<T t(0 0 0) d(0 1 0 0)>, mesh='kuka/kuka_base_lo.obj' color=[.015 .129 .623] }
 shape right_kuka_ring_base(right_arm_base_link)   { type=4, size=[.1 .1 .02 .061], rel=<T t(0 0 0.12) d(0 1 0 0)> color=[.55 .55 .55] }

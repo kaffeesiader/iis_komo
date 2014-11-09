@@ -1,0 +1,38 @@
+#
+# Plans a path, using the KOMO motion planner
+
+# the name of the planning group.
+# can be either 'left_arm' or 'right_arm'
+string planning_group
+
+# the name of the end effector link
+string eef_link
+
+# description of the target position
+# 6 values mean [x,y,z,roll,pitch,yaw]
+# 7 values mean [x,y,z,qx,qy,qz,qw]
+# 3 values mean [x,y,z] (position only)
+float64[] target
+
+# a vector, specifying the allowed position tolerances,
+# to consider a planning attempt to be successful
+geometry_msgs/Vector3 position_tolerance
+
+# a vector, specifying the allowed angular tolerances,
+# to consider a planning attempt to be successful
+geometry_msgs/Vector3 angular_tolerance
+---
+# contains an error message in case that planning failed
+string error
+
+# the resulting trajectory (only positions, no time parameterization!)
+trajectory_msgs/JointTrajectory trajectory
+
+# the error in position
+geometry_msgs/Vector3 linear_error
+
+# the angular error
+geometry_msgs/Vector3 angular_error
+
+# the overall result(i.e. planning was successful or not)
+bool result
