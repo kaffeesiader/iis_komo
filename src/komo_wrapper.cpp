@@ -224,6 +224,7 @@ bool KomoWrapper::plan(IISRobot::PlanninGroup group, const string &eef,
 	cout << "Alignment error: " << ang_error << endl;
 
 	cout << "Displaying trajectory..." << endl;
+	// displayTrajectory(x, -1, *_world, "Planning result", 0.05); // do not block after displaying...
 	displayTrajectory(x, 1, *_world, "Planning result", 0.05);
 	cout << "Validating trajectory..." << endl;
 

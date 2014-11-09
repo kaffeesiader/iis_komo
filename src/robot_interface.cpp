@@ -21,13 +21,16 @@ RobotInterface::RobotInterface(NodeHandle &nh) {
 
 	string topic = "left_arm/follow_joint_trajectory";
 	_left_arm_client.reset(new actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction>(topic, true));
-	_left_arm_client->waitForServer();
 
-	 topic = "right_arm/follow_joint_trajectory";
+	if(!_left_arm_client->isServerConnected())
+		ROS_WARN("Controller for left arm not available yet!");
+
+	topic = "right_arm/follow_joint_trajectory";
 	_right_arm_client.reset(new actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction>(topic, true));
-	_right_arm_client->waitForServer();
 
-	ROS_INFO("Connection established...");
+	if(!_right_arm_client->isServerConnected())
+		ROS_WARN("Controller for right arm not available yet!");
+
 }
 
 IISRobotState RobotInterface::getState()
