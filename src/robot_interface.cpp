@@ -22,6 +22,9 @@ RobotInterface::RobotInterface(NodeHandle &nh) {
 	string topic = "left_arm/follow_joint_trajectory";
 	_left_arm_client.reset(new actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction>(topic, true));
 
+	// wait for action servers to come up
+	sleep(2);
+
 	if(!_left_arm_client->isServerConnected())
 		ROS_WARN("Controller for left arm not available yet!");
 

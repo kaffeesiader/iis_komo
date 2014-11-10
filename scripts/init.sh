@@ -3,8 +3,8 @@
 rostopic pub /simulation/right_arm/settings/switch_mode -1 std_msgs/Int32 10 &
 rostopic pub /simulation/left_arm/settings/switch_mode -1 std_msgs/Int32 10 &
 
-rostopic pub /simulation/right_arm/joint_control/set_velocity_limit -1 std_msgs/Float32 0.1 & 
-rostopic pub /simulation/left_arm/joint_control/set_velocity_limit -1 std_msgs/Float32 0.1 & 
+# rostopic pub /simulation/right_arm/joint_control/set_velocity_limit -1 std_msgs/Float32 0.1 & 
+# rostopic pub /simulation/left_arm/joint_control/set_velocity_limit -1 std_msgs/Float32 0.1 & 
 
 # table surface
 rostopic pub /simulation/scene/AddPrimitiveShape planning_scene_plugin/AddPrimitiveShape -1 "object_id: 'surface' 
